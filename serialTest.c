@@ -38,13 +38,15 @@
 
 #define ADDRESS     "tcp://10.0.0.101:1883@@luno*123"
 #define CLIENTID    "sbcPublisher"
-#define TOPIC       "MQTTNode"
+#define TOPIC       "MQTTNod"
 #define PAYLOAD     "0xC0"
 #define QOS         1 
 #define TIMEOUT     10000L
 #define USERNAME	"aluno"
 #define PASSWORD	"@luno*123"
 
+int MQTT_RECVD = FALSE;
+int MQTT_RECVD_COUNTER = 0;
 
 void sendData(int fd, unsigned char* array, unsigned char pos) {
     serialPutchar(fd, array[pos]);
@@ -119,36 +121,93 @@ void lcdddPuts(int lcdfd, int time, char *message, ...) {
     delay(time);
 }
 
+int sendMQTTMessage(MQTTClient_message *pubmsg, MQTTClient* client, MQTTClient_deliveryToken* token, char* payload, char* topic) {
+	int msgcode;
+    (*pubmsg).payload = payload;
+	(*pubmsg).payloadlen = strlen(payload);
+	msgcode = MQTTClient_publishMessage(*client, topic, pubmsg, token);
+    printf("msgcode -> %d\n", msgcode);
+    if(msgcode > 0) return MQTTCLIENT_FAILURE;
+    return MQTTCLIENT_SUCCESS;
+}
+
+int reachMQTTUnits(MQTTClient_message *pubmsg, MQTTClient* client, MQTTClient_deliveryToken* token, char* MQTTSelectNode, char* MQTTDeselectNode, char* str, int unitId) {
+    int msgcode;
+    msgcode = sendMQTTMessage(pubmsg, client, token, MQTTSelectNode, TOPIC);
+    delay(5);
+    if(msgcode == 0) msgcode = sendMQTTMessage(pubmsg, client, token, MQTTDeselectNode, TOPIC);
+    if(msgcode == 0) {
+        sprintf(str, "Select Unit %d", unitId + 1);
+        return 1;
+    }
+    return -1;
+}
+
+volatile MQTTClient_deliveryToken deliveredtoken;
+ 
+void delivered(void *context, MQTTClient_deliveryToken dt)
+{
+    printf("Message with token value %d delivery confirmed\n", dt);
+    deliveredtoken = dt;
+}
+ 
+int msgarrvd(void *context, char *topicName, int topicLen, MQTTClient_message *message)
+{
+    MQTT_RECVD = TRUE;
+    MQTT_RECVD_COUNTER++;
+    printf("Message arrived\n");
+    printf("     topic: %s\n", topicName);
+    printf("   message: %.*s\n", message->payloadlen, (char*)message->payload);
+    MQTTClient_freeMessage(&message);
+    MQTTClient_free(topicName);
+    return 1;
+}
+ 
+void connlost(void *context, char *cause)
+{
+    printf("\nConnection lost\n");
+    printf("     cause: %s\n", cause);
+}
 
 int main() {
     MQTTClient client;
     int rc;
-    MQTTClient_connectOptions conn_opts = MQTTClient_connectOptions_initializer;
-    MQTTClient_message pubmsg = MQTTClient_message_initializer;
     MQTTClient_deliveryToken token;
-    MQTTClient_create(&client, ADDRESS, CLIENTID, MQTTCLIENT_PERSISTENCE_NONE, NULL);
+    MQTTClient_message pubmsg = MQTTClient_message_initializer;
+    pubmsg.qos = QOS;
+    pubmsg.retained = 0;
+    MQTTClient_connectOptions conn_opts = MQTTClient_connectOptions_initializer;
     conn_opts.keepAliveInterval = 20;
     conn_opts.cleansession = 1;
 	conn_opts.username = USERNAME;
 	conn_opts.password = PASSWORD;
-    if ((rc = MQTTClient_connect(client, &conn_opts)) != MQTTCLIENT_SUCCESS)
+    MQTTClient_create(&client, ADDRESS, CLIENTID, MQTTCLIENT_PERSISTENCE_NONE, NULL);
+
+    if((rc = MQTTClient_setCallbacks(client, NULL, connlost, msgarrvd, delivered)) != MQTTCLIENT_SUCCESS)
+    {
+        printf("Failed to set callbacks, return code %d\n", rc);
+        exit(EXIT_FAILURE);
+    }
+
+    if((rc = MQTTClient_connect(client, &conn_opts)) != MQTTCLIENT_SUCCESS)
     {
         printf("Failed to connect, return code %d\n", rc);
         exit(EXIT_FAILURE);
     }
-    pubmsg.payload = PAYLOAD;
-    pubmsg.payloadlen = strlen(PAYLOAD);
-    pubmsg.qos = QOS;
-    pubmsg.retained = 0;
-    // MQTTClient_publishMessage(client, TOPIC, &pubmsg, &token);
-    
-    // int buttonDownState;
-    // int buttonUpState;
-    // int buttonEnterState;
 
-    // int idxMonitoring;
-    // int lcdfd;
-    // int uartfd;
+    if((rc = MQTTClient_subscribe(client, "MQTTSBC", QOS)) != MQTTCLIENT_SUCCESS)
+    {
+        printf("Failed to subscribe, return code %d\n", rc);
+        exit(EXIT_FAILURE);
+    }
+    
+    int buttonDownState;
+    int buttonUpState;
+    int buttonEnterState;
+
+    int idxMonitoring;
+    int lcdfd;
+    int uartfd;
     // Guarda o indice da node selecionada
     int selectedNode;
     // Menu ativo no momento
@@ -227,19 +286,18 @@ int main() {
     // Configurar UART
     if ((uartfd = serialOpen (UART_3, BAUD_RATE)) < 0){
         fprintf (stderr, "Unable to open serial device: %s\n", strerror (errno)) ;
-        return 1;
+        exit(EXIT_FAILURE);
     }
 
     // Iniciar LCD
     if ((lcdfd = lcdInit (2, 16, 4, LCD_RS, LCD_E, LCD_D4, LCD_D5, LCD_D6, LCD_D7, 0, 0, 0, 0) > 0))
     {
         printf("Unable to init LCD");
-        return 1;
+        exit(EXIT_FAILURE);
     }
 
-    //lcdClear(lcdfd);
-
-    // DESCOBRINDO UNIDADES ONLINES
+    serialFlush(uartfd);
+    // DESCOBRINDO UNIDADES UART ONLINES
     for(int i = 0; i < MAX_UNITS; i++) {
         recvData = reachUnit(uartfd, vetor_menu01[i], selectNode, deselectNode, i);
         if(recvData > 0) {
@@ -267,20 +325,47 @@ int main() {
             cont3++;
         }
     }
+    cont = 0;
+    cont2 = 0;
+    cont3 = 0;
+    // Descobrindo unidades MQTT online
+    for(int i = 0; i < MAX_UNITS; i++) {
+        recvData = reachMQTTUnits(&pubmsg, &client, &token, MQTTselectNode[i], MQTTdeselectNode[i], vetor_menu01[i], i);
+        delay(10);
+        if(MQTT_RECVD && MQTT_RECVD_COUNTER == 2) {
+            availableUnits++;
+            printf("[%d] UNIDADE MQTT DESCOBERTA | recvData -> [%d]\n", i, recvData);
+            MQTT_RECVD = FALSE;
+            MQTT_RECVD_COUNTER = 0;
+        }else{
+            selectNode[i] = -1;
+            deselectNode[i] = -1;
+            vetor_menu01[i][0] = '\0';
+        }
+    }
 
+    for (int i = 0; i < MAX_UNITS; i++){
+        if(selectNode[i] < 255){
+            selectNode[cont] = selectNode[i];
+            cont++;
+        }
+        if(deselectNode[i] < 255){
+            deselectNode[cont2] = deselectNode[i];
+            cont2++;
+        }
+        if(vetor_menu01[i][0] != '\0'){
+            strcpy(vetor_menu01[cont3], vetor_menu01[i]);
+            cont3++;
+        }
+    }
+
+
+
+    printf("AVAILABLE UNITS -> [%d]\n", availableUnits);
 
     sprintf(vetor_menu01[availableUnits], "Monitor All");
     availableUnits++;
     sprintf(vetor_menu01[availableUnits], "Exit");
-   
-    // sprintf(vetor_menu01[availableUnits], "Exit");
-
-    // MOSTRAR NODES CONECTADAS
-    // for(int i=0; i < availableUnits; i++) printf("[%d] -> %s\n", i, vetor_menu01[i]);
-    // printf("availableUnits -> %d\n", availableUnits);
-
-    // for(int i=0; i < availableUnits; i++) printf("[%d] -> %u\n", i, consultCommands[i]);
-    // return 0;
 
     lcdddPuts(lcdfd, 0, "%s", vetor_menu01[index]);
     while(TRUE){
@@ -289,7 +374,7 @@ int main() {
         buttonUpState = digitalRead(BUTTON_UP);
         buttonEnterState = digitalRead(BUTTON_ENTER);
         
-        // Entender esse Dalay, se precisa ou não
+        // Delay de "debouncing"
         delay(200);
         
         if (!buttonDownState) {
@@ -300,16 +385,11 @@ int main() {
             if (meun1Active) {
                 // Se posição passar da quantidade de itens do menu, levar para a posição zero do menu
                 refreshPos(&index, availableUnits + 1);
-                // lcdClear(lcdfd);
-                // lcdPrintf(lcdfd, "%s", vetor_menu01[index]);
                 lcdddPuts(lcdfd, 0, "%s", vetor_menu01[index]);
             
             }else if (menu2Active) {
                 // Se posição passar da quantidade de itens do menu, levar para a posição zero do menu
                 refreshPos(&index, SIZE_MENU_2);
-                //mostrar_menu_02(vetor_menu02, index);
-                // lcdClear(lcdfd);
-                // lcdPrintf(lcdfd, "%s", vetor_menu02[index]);
                 lcdddPuts(lcdfd, 0, "%s", vetor_menu02[index]);
             }
         
@@ -321,24 +401,12 @@ int main() {
             // Verificar se o que vai ser mostrado é o menu 1 ou 2
             if (meun1Active) {
                 // Se posição for menor que a quantidade de itens do menu, levar para a posição 32 do menu
-                // if (index == -1){
-                //     index = qtdItensMenu01 - 1;
-                // }
-                // mostrar_menu_01(vetor_menu01, index);
                 refreshPos(&index, availableUnits + 1);
-                // lcdClear(lcdfd);
-                // lcdPrintf(lcdfd, "%s", vetor_menu01[index]);
-                lcdddPuts(lcdfd, 0, "%s", vetor_menu02[index]);
+                lcdddPuts(lcdfd, 0, "%s", vetor_menu01[index]);
             
             }else if (menu2Active) {
                 // Se posição for menor que a quantidade de itens do menu, levar para a posição 6 do menu
-                // if (index == -1){
-                //     index = qtdItensMenu02 - 1;
-                // }
                 refreshPos(&index, SIZE_MENU_2);
-                //mostrar_menu_02(vetor_menu02, index);
-                // lcdClear(lcdfd);
-                // lcdPrintf(lcdfd, "%s", vetor_menu02[index]);
                 lcdddPuts(lcdfd, 0, "%s", vetor_menu02[index]);
             }
         
@@ -376,20 +444,15 @@ int main() {
                                 lcdPosition(lcdfd, 0, 1);
                                 lcdPuts(lcdfd, "<ENTER TO EXIT>");
                                 delay(1000);
-                                //if (idxMonitoring == 2) break; 
                                 idxMonitoring++;
 								printf("IDXMONITORING -> %d\n", idxMonitoring);
                             }
                             // Tirar seleção da node
-                            //lcdddPuts(lcdfd, "Deselecting the unit...", TWO_SECONDS);
                             sendData(uartfd, deselectNode, i);
                             recvData = recvDigitalData(uartfd);
                             printf("DESELECT RECV DATA -> %d\n", recvData);
                         }
                     }
-                    //  lcdClear(lcdfd);
-                    //  lcdPuts(lcdfd, "SAINDO DO MONITORAMENTO");
-                    //  delay(1000);
                     while(!digitalRead(BUTTON_DOWN));
                     lcdddPuts(lcdfd, 0, "%s", vetor_menu01[index]);
                     continue;
@@ -400,31 +463,20 @@ int main() {
                     sendData(uartfd, selectNode, index);
                     // Salva a index da node selecionada no vetor de ID das Nodes
                     recvData = recvDigitalData(uartfd);
-                    // lcdClear(lcdfd);
                     if(recvData > -1) {
                         printf("SELECT RECV DATA -> %d\n", recvData);
                         selectedNode = index;
-                        //serialPutchar(fd, select_node[index - 1]);
                         // Desabilita menu 1
                         meun1Active = FALSE;
                         // Habilita menu 2
                         menu2Active = TRUE;
                         // Reseta o contador de posicoes
                         index = 0;
-                        // lcdPuts(lcdfd, "UNIDADE SELECIONADA COM SUCESSO");
-                        // delay(3000);
                         lcdddPuts(lcdfd, TWO_SECONDS, "Success on selecting the unit");
-                        // lcdClear(lcdfd);
-                        // lcdPrintf(lcdfd, "%s", vetor_menu02[index]);
                         lcdddPuts(lcdfd, 0, "%s", vetor_menu02[index]);
                     }
                     else {
-                        // lcdPuts(lcdfd, "UNIDADE INALCANCAVEL :/");
-                        // delay(3000);
-                        // lcdClear(lcdfd);
                         lcdddPuts(lcdfd, TWO_SECONDS, "Unreachable Unit");
-                        // lcdPrintf(lcdfd, "%s", vetor_menu01[index]);
-                        // delay(3000);
                         lcdddPuts(lcdfd, 0, "%s", vetor_menu01[index]);
                     }
                 }
@@ -434,24 +486,14 @@ int main() {
                 // Verificar se apertou enter na posição Voltar
                 if (choiceMenu2 == TURN_BACK) {
                     // Desseleciona a Node previamente selecionada
-                    // lcdClear(lcdfd);
-                    // lcdPrintf(lcdfd, "DESELECIONANDO A UNIDADE %d", selectedNode+1);
-                    // delay(3000);
                     lcdddPuts(lcdfd, TWO_SECONDS, "Deselecting the unit %u", selectNode[selectedNode]);
                     sendData(uartfd, deselectNode, selectedNode);
                     recvData = recvDigitalData(uartfd);
                     printf("DESELECT RECV DATA -> %d\n", recvData);
-                    //serialPutchar(fd, deselect_node[index - 1]);
                     meun1Active = TRUE;
                     menu2Active = FALSE;
                     index = choiceMenu1;
-                    //mostrar_menu_01(vetor_menu01, index);
-                    // lcdClear(lcdfd);
-                    // lcdPuts(lcdfd, "UNIDADE DESELECIONADA");
-                    // delay(3000);
                     lcdddPuts(lcdfd, TWO_SECONDS, "Unit successfully deselected");
-                    // lcdClear(lcdfd);
-                    // lcdPrintf(lcdfd, "%s", vetor_menu01[index]);
                     lcdddPuts(lcdfd, 0, "%s", vetor_menu01[index]);
 
                 }else{
@@ -470,16 +512,10 @@ int main() {
                              lcdPuts(lcdfd, "<ENTER TO EXIT>");
                              delay(1000);
                          }
-                        //  lcdClear(lcdfd);
-                        //  lcdPuts(lcdfd, "SAINDO DO MONITORAMENTO");
-                        //  delay(1000);
                          while(!digitalRead(BUTTON_DOWN));
                          lcdddPuts(lcdfd, 0, "%s", vetor_menu02[index]);
                     }
                    if(index == 0) {
-                        // lcdClear(lcdfd);
-                        // lcdPuts(lcdfd, "LIGANDO O LED BUILTIN...");
-                        // delay(2000);
                         lcdddPuts(lcdfd, TWO_SECONDS, "Turning on LED");
                         sendData(uartfd, consultCommands, index);
                         // Verificacao da resposta da UNIDADE
@@ -498,27 +534,16 @@ int main() {
                             lcdPuts(lcdfd, "<ENTER TO EXIT>");
                             delay(500);
                         }
-                        // lcdClear(lcdfd);
-                        // lcdPuts(lcdfd, "SAINDO DO MONITORAMENTO");
-                        // delay(1000);
                         while(!digitalRead(BUTTON_DOWN));
                         lcdddPuts(lcdfd, 0, "%s", vetor_menu02[index]);
                     }
                     else if(CONSULT) {
                         // Mandar mensagem para a node e pegar o dado para exibir no LCD
-                        // lcdPuts(lcdfd, "ENVIANDO COMANDO...");
-                        // delay(1000);
                         lcdddPuts(lcdfd, TWO_SECONDS, "Sending Command...");
                         // Enviando comando a Node selecionada
-                        // Logica para implementar a consulta ou monitoramento
                         sendData(uartfd, consultCommands, index);
-                        // lcdClear(lcdfd);
-                        // lcdPuts(lcdfd, "COMANDO ENVIADO!");
-                        // delay(1000);
-                        // lcdddPuts(lcdfd, "COMANDO ENVIADO", TWO_SECONDS);
                         lcdddPuts(lcdfd, TWO_SECONDS, "Successfully Sent");
                         if(ANALOG_PIN) { 
-                            // LOGICA DO SENSOR ANALOGICO
                             recvData = recvAnalogData(uartfd);
                         }
                         else recvData = recvDigitalData(uartfd);
@@ -530,17 +555,20 @@ int main() {
                         else { 
                             lcdddPuts(lcdfd, TWO_SECONDS, "Unreachable Unit");
                         }
-                        //serialPutchar(fd, array_command[menu_counter]);
-                        // Mostrar dado que foi recebido
-                        // Mostrar Menu 02
-                        //mostrar_menu_02(vetor_menu02, index);
-                        // lcdClear(lcdfd);
-                        // lcdPrintf(lcdfd, "%s", vetor_menu02[index]);
                         lcdddPuts(lcdfd, TWO_SECONDS, "%s", vetor_menu02[index]);
                     }
                 }   
             }
         }
     }
+    if((rc = MQTTClient_unsubscribe(client, TOPIC)) != MQTTCLIENT_SUCCESS) {
+        printf("Failed to unsubscribe, return code %d\n", rc);
+        exit(EXIT_FAILURE);
+    }
+    if ((rc = MQTTClient_disconnect(client, 10000)) != MQTTCLIENT_SUCCESS) {
+        printf("Failed to disconnect, return code %d\n", rc);
+        exit(EXIT_FAILURE);
+    }
+    MQTTClient_destroy(&client);
     return EXIT_SUCCESS;
 }
