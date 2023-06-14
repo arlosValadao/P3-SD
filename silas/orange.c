@@ -1,14 +1,31 @@
-#include "stdio.h"
-#include "stdlib.h"
-#include "string.h"
+// gcc -Wall -Wextra -o orange orange.c -lpaho-mqtt3c
+#include <stdio.h>
+#include <string.h>
+#include <errno.h>
+#include <time.h>
+#include <stdlib.h>
+#include <stdarg.h>
 #include "MQTTClient.h"
+#include <lcd.h>
+#include <wiringPi.h>
+#include <wiringSerial.h>
 
-#define ADDRESS     "tcp://localhost:1883"
+
+// #define ADDRESS     "tcp://localhost:1883"
+// #define CLIENTID    "Orange"
+// #define QOS         1
+// #define TIMEOUT     10000L
+
+#define ADDRESS     "tcp://10.0.0.101:1883@@luno*123"
 #define CLIENTID    "Orange"
-#define QOS         1
+#define QOS         1 
 #define TIMEOUT     10000L
+#define USERNAME    "aluno"
+#define PASSWORD    "@luno*123"
 
-char respostaMQTT[100];
+#define MAX_UNITS 32
+
+char respostaMQTT[100] = "0";
 
 volatile MQTTClient_deliveryToken deliveredtoken;
 
@@ -25,6 +42,8 @@ void iniciarMQTT() {
     MQTTClient_create(&client, ADDRESS, CLIENTID, MQTTCLIENT_PERSISTENCE_NONE, NULL);
     conn_opts.keepAliveInterval = 20;
     conn_opts.cleansession = 1;
+    conn_opts.username = USERNAME;
+    conn_opts.password = PASSWORD;
 
     MQTTClient_setCallbacks(client, NULL, NULL, mensagemRecebida, NULL);
 
@@ -76,6 +95,7 @@ int verificarNodeNaRede(char* node){
     enviarMensagemMQTT("node", node);
     delay(1);
     if(respostaMQTT == node){
+        printf("NODE MQTT ENCONTRADA");
         return 1;
     }
     return 0;
@@ -84,6 +104,33 @@ int verificarNodeNaRede(char* node){
 
 int main(int argc, char* argv[])
 {   
+    char monitoringLabels[3][2] = { {"D0"}, {"D1"}, {"A0"} };
+    unsigned char monitoringArrayMQTT[3][4] = { {"0xC3"}, {"0xC5"}, {"0xC1"}};
+
+    // Definição de comandos
+    char MQTTselectNode[MAX_UNITS][5] = {
+                                        "0x1", "0x2", "0x3", "0x4", "0x5", "0x6", "0x7",
+                                        "0x8", "0x9", "0xA", "0xB", "0xC", "0xD", "0xE", "0xF" ,"0x10", "0x11",
+                                        "0x12", "0x13", "0x14", "0x15", "0x16", "0x17", "0x18", "0x19",
+                                        "0x1A", "0x1B", "0x1C", "0x1D", "0x1E", "0x1F", "0x20"
+                                    };
+
+    char MQTTdeselectNode[MAX_UNITS][5] = {   
+                                        "0x81", "0x82", "0x83", "0x84", "0x85", "0x86", "0x87",
+                                        "0x88", "0x89", "0x8A", "0x8B", "0x8C", "0x8D", "0x8E", "0x8F",
+                                        "0x90", "0x91", "0x92", "0x93", "0x94", "0x95", "0x96", "0x97",
+                                        "0x98", "0x99", "0x9A", "0x9B", "0x9C", "0x9D", "0x9E", "0x9F", "0xA0"
+                                    };
+    
+    char MQTTconsultCommands[8][5] = { "0xC0", "0xC1", "0xC2", "0xC3", "0xC4", "0xC5", "0xC6", "0xC7" };
+
+
+
+
+
+
+    //
+
     iniciarMQTT();
 
     escutarTopicoMQTT("respostas_das_nodes");
@@ -93,13 +140,26 @@ int main(int argc, char* argv[])
     // Encontrar todas as nodes
     // Mandar msg de node em node e ver se está na rede
     int nodeExiste;
-    for(int i = 0; i < 32; i++){
-        nodeExiste = verificarNodeNaRede("0x1") //0x1 é só um exemplo
-        if(nodeExiste == 1){
-            // Node existe
-        }else{
+    for(int i = 0; i < MAX_UNITS; i++){
+        nodeExiste = verificarNodeNaRede(MQTTselectNode[i]); //0x1 é só um exemplo
+        if(nodeExiste != 1){
             // Node não existe
+            sprintf(MQTTselectNode[i], "0");
+            sprintf(MQTTdeselectNode[i], "0");
         }
+    }
+
+    int contM;
+    for (int i = 0; i < MAX_UNITS; i++){
+        if(MQTTselectNode[i][0] != '0'){
+            strcpy(MQTTselectNode[contM], MQTTselectNode[i]);
+            strcpy(MQTTdeselectNode[contM], MQTTdeselectNode[i]);
+            contM++;
+        }
+        // if(vetor_menu01[i][0] != '\0'){
+        //     strcpy(vetor_menu01[cont3], vetor_menu01[i]);
+        //     cont3++;
+        // }
     }
 
 
