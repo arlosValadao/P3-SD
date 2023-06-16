@@ -1,27 +1,22 @@
-// gcc -Wall -Wextra -o orange orange.c -lpaho-mqtt3c
+// gcc -Wall -Wextra -o main main.c -lpaho-mqtt3c
 #include <stdio.h>
 #include <string.h>
-#include <errno.h>
 #include <time.h>
 #include <stdlib.h>
-#include <stdarg.h>
 #include "MQTTClient.h"
-#include <lcd.h>
-#include <wiringPi.h>
-#include <wiringSerial.h>
 
 
-// #define ADDRESS     "tcp://localhost:1883"
-// #define CLIENTID    "Orange"
-// #define QOS         1
-// #define TIMEOUT     10000L
-
-#define ADDRESS     "tcp://10.0.0.101:1883@@luno*123"
+#define ADDRESS     "tcp://localhost:1883"
 #define CLIENTID    "Orange"
-#define QOS         1 
+#define QOS         1
 #define TIMEOUT     10000L
-#define USERNAME    "aluno"
-#define PASSWORD    "@luno*123"
+
+// #define ADDRESS     "tcp://10.0.0.101:1883@@luno*123"
+// #define CLIENTID    "Orange"
+// #define QOS         1 
+// #define TIMEOUT     10000L
+// #define USERNAME    "aluno"
+// #define PASSWORD    "@luno*123"
 
 #define MAX_UNITS 32
 
@@ -42,8 +37,8 @@ void iniciarMQTT() {
     MQTTClient_create(&client, ADDRESS, CLIENTID, MQTTCLIENT_PERSISTENCE_NONE, NULL);
     conn_opts.keepAliveInterval = 20;
     conn_opts.cleansession = 1;
-    conn_opts.username = USERNAME;
-    conn_opts.password = PASSWORD;
+    // conn_opts.username = USERNAME;
+    // conn_opts.password = PASSWORD;
 
     MQTTClient_setCallbacks(client, NULL, NULL, mensagemRecebida, NULL);
 
@@ -72,13 +67,13 @@ int enviarMensagemMQTT(const char* topico, const char* mensagem) {
 }
 
 int mensagemRecebida(void* context, char* topicName, int topicLen, MQTTClient_message* message) {
-    printf("Mensagem Recebida no Tópico: %s\n", topicName);
+    //printf("Mensagem Recebida no Tópico: %s\n", topicName);
     //printf("Conteúdo: %.*s\n", message->payloadlen, (char*)message->payload);
     
     // Copiar o valor recebido para a variável respostaMQTT que é Global
     strncpy(respostaMQTT, (char*)message->payload, sizeof(respostaMQTT) - 1);
     respostaMQTT[sizeof(respostaMQTT) - 1] = '\0';
-    printf("Valor recebido: %s\n", respostaMQTT);
+    //printf("Valor recebido: %s\n", respostaMQTT);
 
     MQTTClient_freeMessage(&message);
     MQTTClient_free(topicName);
@@ -91,11 +86,23 @@ void escutarTopicoMQTT(const char* topico) {
     printf("Subscrito ao tópico: %s\n", topico);
 }
 
+void delay(unsigned long ms) {
+    struct timespec req = {0};
+    time_t sec = (int)(ms / 1000);
+    ms = ms - (sec * 1000);
+    req.tv_sec = sec;
+    req.tv_nsec = ms * 1000000L;
+    nanosleep(&req, NULL);
+}
+
 int verificarNodeNaRede(char* node){
-    enviarMensagemMQTT("node", node);
-    delay(1);
-    if(respostaMQTT == node){
-        printf("NODE MQTT ENCONTRADA");
+    printf("Enviar Mensagem para node: %s - ", node);
+    enviarMensagemMQTT("comandos_orange", node);
+    delay(2);
+    printf("Valor recebido: %s ", respostaMQTT);
+    if(strcmp(respostaMQTT, node) == 0){
+        printf("NODE MQTT ENCONTRADA: \n");
+        sprintf(respostaMQTT, "0");
         return 1;
     }
     return 0;
@@ -105,7 +112,7 @@ int verificarNodeNaRede(char* node){
 int main(int argc, char* argv[])
 {   
     char monitoringLabels[3][2] = { {"D0"}, {"D1"}, {"A0"} };
-    unsigned char monitoringArrayMQTT[3][4] = { {"0xC3"}, {"0xC5"}, {"0xC1"}};
+    char* monitoringArrayMQTT[3] = { "0xC3", "0xC5", "0xC1"};
 
     // Definição de comandos
     char MQTTselectNode[MAX_UNITS][5] = {
@@ -124,11 +131,7 @@ int main(int argc, char* argv[])
     
     char MQTTconsultCommands[8][5] = { "0xC0", "0xC1", "0xC2", "0xC3", "0xC4", "0xC5", "0xC6", "0xC7" };
 
-
-
-
-
-
+    int rc;
     //
 
     iniciarMQTT();
@@ -140,12 +143,17 @@ int main(int argc, char* argv[])
     // Encontrar todas as nodes
     // Mandar msg de node em node e ver se está na rede
     int nodeExiste;
-    for(int i = 0; i < MAX_UNITS; i++){
+    for(int i = 0; i < MAX_UNITS - 31; i++){
         nodeExiste = verificarNodeNaRede(MQTTselectNode[i]); //0x1 é só um exemplo
         if(nodeExiste != 1){
             // Node não existe
             sprintf(MQTTselectNode[i], "0");
             sprintf(MQTTdeselectNode[i], "0");
+            printf("Node não encontrada \n");
+        }else{
+            enviarMensagemMQTT("comandos_orange", MQTTdeselectNode[i]);
+            delay(2);
+            sprintf(respostaMQTT, "0");
         }
     }
 
@@ -163,12 +171,33 @@ int main(int argc, char* argv[])
     }
 
 
+    // for (int i = 0; i < MAX_UNITS; i++) {
+    //     printf("MQTTselectNode[%d]: %s\n", i, MQTTselectNode[i]);
+    // }
+    // printf("\n\n");
+    // for (int i = 0; i < MAX_UNITS; i++) {
+    //     printf("MQTTselectNode[%d]: %s\n", i, MQTTdeselectNode[i]);
+    // }
+
+
+    rc = enviarMensagemMQTT("comandos_orange", "0x1");
+    delay(2);
+    sprintf(respostaMQTT, "0");
     
     while (1) {
         // Mantenha o programa em execução para receber mensagens
+        printf("Valor Enviado: %s -> ", monitoringArrayMQTT[2]);
+        rc = enviarMensagemMQTT("comandos_orange", monitoringArrayMQTT[2]);
+        delay(2);
+        printf("Valor recebido: %s \n", respostaMQTT);
+        sprintf(respostaMQTT, "0");
+        delay(1000);
     }
 
-    int rc;
+
+
+
+
     rc = enviarMensagemMQTT("Topico_Teste", "Hello Silas");
     
     if(rc == MQTTCLIENT_SUCCESS){
