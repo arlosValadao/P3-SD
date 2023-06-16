@@ -1,3 +1,16 @@
+from dmqtt.signals import connect, regex, topic
+from django.dispatch import receiver
+
+@receiver(connect)
+def on_connect(sender, **kwargs):
+    sender.subscribe("#")
+
+@topic("django/mqtt")
+def simple_topic(sender, topic, data, **kwargs):
+    print(topic)
+    print(data)
+
+"""
 from django.http import HttpResponse, JsonResponse
 import paho.mqtt.client as mqtt
 import json
@@ -31,6 +44,7 @@ def publish_message(request):
     request_data = json.loads(request.body)
     rc, mid = client.publish(request_data['topic'], request_data['msg'])
     return JsonResponse({'code': rc})
+"""
 
 def index(request):
     return HttpResponse("OlaZZ!")
