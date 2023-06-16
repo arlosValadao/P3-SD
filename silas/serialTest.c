@@ -45,6 +45,9 @@
 #define USERNAME    "aluno"
 #define PASSWORD    "@luno*123"
 
+#define TOPICO "MQTTNode"
+#define TOPICO_ESCUTA "MQTTSBC"
+
 char respostaMQTT[100] = "0";
 volatile MQTTClient_deliveryToken deliveredtoken;
 
@@ -60,8 +63,8 @@ void iniciarMQTT() {
     MQTTClient_create(&client, ADDRESS, CLIENTID, MQTTCLIENT_PERSISTENCE_NONE, NULL);
     conn_opts.keepAliveInterval = 20;
     conn_opts.cleansession = 1;
-    // conn_opts.username = USERNAME;
-    // conn_opts.password = PASSWORD;
+    conn_opts.username = USERNAME;
+    conn_opts.password = PASSWORD;
 
     MQTTClient_setCallbacks(client, NULL, NULL, mensagemRecebida, NULL);
 
@@ -114,9 +117,9 @@ void escutarTopicoMQTT(const char* topico) {
 
 int verificarNodeNaRede(char* node){
     printf("Enviar Mensagem para node: %s - ", node);
-    enviarMensagemMQTT("comandos_orange", node);
-    delay(2);
-    printf("Valor recebido: %s ", respostaMQTT);
+    enviarMensagemMQTT(TOPICO, node);
+    delay(50);
+    printf("Valor recebido: %s - ", respostaMQTT);
     if(strcmp(respostaMQTT, node) == 0){
         printf("NODE MQTT ENCONTRADA: \n");
         sprintf(respostaMQTT, "0");
@@ -196,7 +199,6 @@ void lcdddPuts(int lcdfd, char str[], int time) {
 
 int main() {
     int indexMenu01 = 0;
-    char str[100];
 
     int buttonDownState;
     int buttonUpState;
@@ -285,7 +287,7 @@ int main() {
 
     // Inicializar MQTT
     iniciarMQTT();
-    escutarTopicoMQTT("respostas_das_nodes");
+    escutarTopicoMQTT(TOPICO_ESCUTA);
 
     // Setar botões como entrada
     pinMode(BUTTON_DOWN, INPUT);
@@ -307,6 +309,7 @@ int main() {
     }
 
     //lcdClear(lcdfd);
+    serialFlush(uartfd);
 
     // DESCOBRINDO UNIDADES ONLINES
     for(int i = 0; i < MAX_UNITS; i++) {
@@ -341,7 +344,7 @@ int main() {
     // Mandar msg de node em node e ver se está na rede
     int nodeExiste;
     int contAumentarMenu1 = cont3;
-    for(int i = 0; i < MAX_UNITS - 31; i++){
+    for(int i = 0; i < MAX_UNITS; i++){
         nodeExiste = verificarNodeNaRede(MQTTselectNode[i]); //0x1 é só um exemplo
         if(nodeExiste != 1){
             // Node não existe
@@ -349,23 +352,28 @@ int main() {
             sprintf(MQTTdeselectNode[i], "0");
             printf("Node não encontrada \n");
         }else{
-            enviarMensagemMQTT("comandos_orange", MQTTdeselectNode[i]);
+            enviarMensagemMQTT(TOPICO, MQTTdeselectNode[i]);
+            delay(25);
             sprintf(vetor_menu01[contAumentarMenu1], "Select Unit %d MQTT", i + 1);
-            contAumentarMenu1++;
-            availableUnits++;
-            delay(2);
             sprintf(respostaMQTT, "0");
+            contAumentarMenu1++;
+            availableUnits++;      
         }
     }
 
-    int contM;
+    int contM = 0;
     for (int i = 0; i < MAX_UNITS; i++){
-        if(MQTTselectNode[i][0] != '0'){
+        if(strcmp(MQTTselectNode[i], "0") != 0){
             strcpy(MQTTselectNode[contM], MQTTselectNode[i]);
             strcpy(MQTTdeselectNode[contM], MQTTdeselectNode[i]);
             contM++;
         }
     }
+
+    //for (int i = 0; i < contM; i++){
+    //    printf("Select Node %s \n", MQTTselectNode[i]);
+    //    printf("Deselect Node %s \n", MQTTdeselectNode[i]);
+    // }
 
 
     sprintf(vetor_menu01[availableUnits], "Monitor All");
@@ -431,7 +439,8 @@ int main() {
                         idxMonitoring = 0;
                         for (int i = 0; i < availableUnits - 1; i++){
                             if(i < cont3){ // Nodes conectadas a UART
-                                lcdddPuts(lcdfd, "Selecting Unit...", TWO_SECONDS);
+                                printf("\nDADOS DA UART\n");
+                                lcdddPuts(lcdfd, "Selecting Unit UART...", TWO_SECONDS);
                                 sendData(uartfd, selectNode, i);
                                 recvData = recvDigitalData(uartfd);
                                 lcdddPuts(lcdfd, "NODE SELECTED", TWO_SECONDS);
@@ -444,7 +453,7 @@ int main() {
                                     sendData(uartfd, monitoringArray, idxMonitoring);
                                     if(idxMonitoring == 2) recvData = recvAnalogData(uartfd);
                                     else recvData = recvDigitalData(uartfd);
-                                    printf("IDX -> %d\n", idxMonitoring);
+                                    printf("Dado Recebido -> %d\n", recvData);
                                     lcdPrintf(lcdfd, "Value %s: %d", monitoringLabels[idxMonitoring], recvData);
                                     lcdPosition(lcdfd, 0, 1);
                                     lcdPuts(lcdfd, "<ENTER TO EXIT>");
@@ -458,23 +467,24 @@ int main() {
                                 recvData = recvDigitalData(uartfd);
                                 printf("DESELECT RECV DATA -> %d\n", recvData);
                             }else if(i >= cont3){ // Nodes conectadas a MQTT
-                                lcdddPuts(lcdfd, "Selecting Unit...", 1000); // 1 segundo de espera
-                                
-                                int aux = 0;
-                                rc = enviarMensagemMQTT("comandos_orange", MQTTselectNode[i - (cont3 + 1)]);
+                                printf("\nDADOS DA MQTT\n");
+                                rc = verificarNodeNaRede(MQTTselectNode[i - (cont3)]);
+                                lcdddPuts(lcdfd, "Selecting Unit MQTT...", 1000); // 1 segundo de espera
+                                //delay(25);
+                                //silas
+                                if(rc == 1){
+                                    printf("NODE SELECIONADA \n");
+                                }
                                 lcdddPuts(lcdfd, "NODE SELECTED", 1000);
                                 // Verificar estado dos Pinos
                                 idxMonitoring = 0;
                                 while(digitalRead(BUTTON_DOWN)) {
                                     sprintf(respostaMQTT, "0");
                                     lcdClear(lcdfd);
-                                    rc = enviarMensagemMQTT("comandos_orange", monitoringArray[idxMonitoring]);
-                                    delay(2);
-                                    printf("IDX -> %d\n", idxMonitoring);
-                                    //lcdPrintf(lcdfd, "Value %s: %d", monitoringLabels[idxMonitoring], respostaMQTT);
-                                    sprintf(str, "Value %s: %s", monitoringLabels[idxMonitoring], respostaMQTT);
-                                    lcdPuts(lcdfd, str);
-                                    lcdClear(lcdfd);
+                                    rc = enviarMensagemMQTT(TOPICO, monitoringArrayMQTT[idxMonitoring]);
+                                    delay(50);
+                                    printf("Dado Recebido -> %s \n", respostaMQTT);
+                                    lcdPrintf(lcdfd, "Value %s: %s", monitoringLabels[idxMonitoring], respostaMQTT);
                                     lcdPosition(lcdfd, 0, 1);
                                     lcdPuts(lcdfd, "<ENTER TO EXIT>");
                                     delay(1000);
@@ -483,8 +493,8 @@ int main() {
                                 }
                                 // Tirar seleção da node
                                 //lcdddPuts(lcdfd, "Deselecting the unit...", TWO_SECONDS);
-                                enviarMensagemMQTT("comandos_orange", MQTTdeselectNode[i - (cont3 + 1)]);
-                                delay(2);
+                                enviarMensagemMQTT(TOPICO, MQTTdeselectNode[i - (cont3)]);
+                                delay(100);
                                 printf("DESELECT RECV DATA -> %s\n", respostaMQTT);
                                 sprintf(respostaMQTT, "0");
                             }
@@ -497,7 +507,7 @@ int main() {
                     continue;
                 }
                 else {
-                    if(i < cont3){ // Nodes UART
+                    if(index < cont3){ // Nodes UART
                         lcdddPuts(lcdfd, "Selecting Unit...", TWO_SECONDS);
                         // Seleciona a Node com o ID escolhido
                         sendData(uartfd, selectNode, index);
@@ -528,10 +538,17 @@ int main() {
                     }else{ // Nodes MQTT
                         lcdddPuts(lcdfd, "Selecting Unit...", TWO_SECONDS);
                         // Seleciona a Node com o ID escolhido
-                        int testeVerificar = verificarNodeNaRede(MQTTselectNode[index - (cont3 + 1)]);
+                        int testeVerificar;
+                        if(cont3 == 0){
+                            testeVerificar = verificarNodeNaRede(MQTTselectNode[index]);
+                        }
+                        else{
+                            testeVerificar = verificarNodeNaRede(MQTTselectNode[index - (cont3)]);
+                        }
                         if(testeVerificar == 1) {
+                            delay(5);
                             printf("SELECT RECV DATA -> %s\n", respostaMQTT);
-                            selectedNode = index - (cont3 + 1);
+                            selectedNode = index - (cont3);
                             // Desabilita menu 1
                             meun1Active = FALSE;
                             // Habilita menu 2
@@ -566,20 +583,13 @@ int main() {
                         meun1Active = TRUE;
                         menu2Active = FALSE;
                         index = choiceMenu1;
-                        //mostrar_menu_01(vetor_menu01, index);
-                        // lcdClear(lcdfd);
-                        // lcdPuts(lcdfd, "UNIDADE DESELECIONADA");
-                        // delay(3000);
                         lcdddPuts(lcdfd, "Unit successfully deselected", TWO_SECONDS);
-                        // lcdClear(lcdfd);
-                        // lcdPrintf(lcdfd, "%s", vetor_menu01[index]);
                         lcdddPuts(lcdfd, vetor_menu01[index], 0);
                     }else{
                         // Desseleciona a Node previamente selecionada
                         lcdddPuts(lcdfd, "Deselecting the unit...", TWO_SECONDS);
-                        sendData(uartfd, deselectNode, selectedNode);
-                        enviarMensagemMQTT("comandos_orange", MQTTdeselectNode[selectedNode]);
-                        delay(2);
+                        enviarMensagemMQTT(TOPICO, MQTTdeselectNode[selectedNode]);
+                        delay(50);
                         printf("DESELECT RECV DATA -> %s\n", respostaMQTT);
                         meun1Active = TRUE;
                         menu2Active = FALSE;
@@ -599,15 +609,15 @@ int main() {
                                 sendData(uartfd, monitoringArray, idxMonitoring);
                                 if(idxMonitoring == 2) recvData = recvAnalogData(uartfd);
                                 else recvData = recvDigitalData(uartfd);
-                                printf("IDX -> %d\n", idxMonitoring);
+                                printf("Dado Recebido -> %d\n", recvData);
                                 idxMonitoring == 2 ? (idxMonitoring = 0) : idxMonitoring++; 
                                 lcdPrintf(lcdfd, "Value %s: %d", monitoringLabels2[idxMonitoring], recvData);
                                 
                             }else{
                                 sprintf(respostaMQTT, "0");
-                                rc = enviarMensagemMQTT("comandos_orange", monitoringArrayMQTT[idxMonitoring]);
-                                delay(2);
-                                printf("IDX -> %s\n", respostaMQTT);
+                                rc = enviarMensagemMQTT(TOPICO, monitoringArrayMQTT[idxMonitoring]);
+                                delay(100);
+                                printf("Dado Recebido -> %s\n", respostaMQTT);
                                 idxMonitoring == 2 ? (idxMonitoring = 0) : idxMonitoring++;
                                 lcdPrintf(lcdfd, "Value %s: %s", monitoringLabels2[idxMonitoring], respostaMQTT);
                             }
@@ -624,7 +634,8 @@ int main() {
                             sendData(uartfd, consultCommands, index);
                         }
                         else{
-                            rc = enviarMensagemMQTT("comandos_orange", consultCommands[index]);
+                            rc = enviarMensagemMQTT(TOPICO, MQTTconsultCommands[index]);
+                            delay(100);
                         }
                         // Verificacao da resposta da UNIDADE
                         continue;
@@ -642,8 +653,8 @@ int main() {
                             }
                             else{
                                 sprintf(respostaMQTT, "0");
-                                rc = enviarMensagemMQTT("comandos_orange", consultCommands[index - 1]);
-                                delay(2);
+                                rc = enviarMensagemMQTT(TOPICO, MQTTconsultCommands[index - 1]);
+                                delay(100);
                                 lcdPrintf(lcdfd, "Value: %s", respostaMQTT);
                             }
                             lcdPosition(lcdfd, 0, 1);
@@ -676,8 +687,8 @@ int main() {
                             }
                         }else{
                             sprintf(respostaMQTT, "0");
-                            rc = enviarMensagemMQTT("comandos_orange", consultCommands[index]);
-                            delay(2);
+                            rc = enviarMensagemMQTT(TOPICO, MQTTconsultCommands[index]);
+                            delay(100);
                             lcdddPuts(lcdfd, "Successfully Sent", 1000);
                             lcdClear(lcdfd);
                             lcdPrintf(lcdfd, "Sensor Val.: %s", respostaMQTT);
