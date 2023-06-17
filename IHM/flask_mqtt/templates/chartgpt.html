@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+    <head>
+        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    </head>
+    <body>
+        <h3> Grafico</h3>
+    </body>
+</html>
+
+<script>
+    fetch('http://localhost:5000/')
+        .then(response => response.json())
+        .then(data => {
+            console.log("alsdjklaskdlakd")
+            console.log(data)
+            console.log(data[0])
+            // Extract the required data from the API response
+            const labels = ["1","2","3","4","5","6","7","8","9","10"]
+            // Create a canvas element in your HTML to render the chart
+            // const values = data.map(entry => entry.value);
+            var values = data;
+            const canvas = document.createElement('canvas');
+            document.body.appendChild(canvas);
+
+            // Create a new chart using Chart.js
+            new Chart(canvas, {
+                type: 'line', // Specify the type of chart (e.g., bar, line, pie)
+                data: {
+                    labels: labels, // Set the labels for the X-axis
+                    datasets: [{
+                        label: 'API Data', // Set the label for the dataset
+                        data: values, // Set the values for the Y-axis
+                        backgroundColor: 'rgba(0, 123, 255, 0.5)' // Set the background color for the bars
+                    }]
+                },
+                options: {
+                    responsive: true, // Make the chart responsive
+                    scales: {
+                        y: {
+                            beginAtZero: true // Start the Y-axis at zero
+                        }
+                    }
+                }
+            });
+        })       
+        .catch(error => {
+            console.error('Error:', error);
+        });
+</script>
+
+<style>
+    body{
+    background-color:#383735;
+   }
+h1{
+    color:#e9f0e9;
+    margin-left:43%;
+  }
+h3{
+    color: white;
+}
+#plots{
+    margin:auto;
+    background-color: #2e2d2d;
+}
+</style>

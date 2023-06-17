@@ -1,0 +1,76 @@
+<html>
+<head>
+    <title>
+        Chart
+    </title>
+    <!-- <link rel="stylesheet" href="index.css"> -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.8.0/Chart.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/1.4.0/axios.min.js"></script>
+</head>
+<body>
+    <header>
+        <h1>
+            Charts
+        </h1>
+        
+    </header>
+    <canvas id="plots" style="width:100%;max-width:700px"></canvas>
+    <!-- <script src="./plot.js"> -->
+    <script>
+        // dados = axios.get('http://localhost:5000')
+        //             .then((response) => {
+        //                 console.log(response.data);
+        //                 console.log(response.status);
+        //                 console.log(response.statusText);
+        //                 console.log(response.headers);
+        //                 console.log(response.config);
+        //             });
+        async function request(){
+            try {
+                dados = await axios.get('http://localhost:5000');
+                console.log('asdlkasldkl');
+                console.log(data);
+                return dados.data;
+            }
+            catch (error){
+                console.log(error); 
+            }
+        }
+        mqtt_dados = request();
+        console.log("dados");
+        console.log(mqtt_dados.data);
+                // Get the HTML canvas by its id 
+        plots = document.getElementById("plots");
+        // Example datasets for X and Y-axes 
+        var medicoes = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10"]
+        // var months = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Out", "Nov", "Dez"]; //Stays on the X-axis 
+        var traffic = [65, 59, 80, 81, 56, 55, 60] //Stays on the Y-axis 
+        // Create an instance of Chart object:
+        new Chart(plots, {
+            type: 'line', //Declare the chart type 
+            data: {
+                labels: medicoes, //X-axis data 
+                datasets: [{
+                    data: traffic, //Y-axis data 
+                    backgroundColor: '#5e440f',
+                    borderColor: 'white',
+                    fill: false, //Fills the curve under the line with the babckground color. It's true by default 
+                }]
+            },
+        });
+    </script>
+</body>
+</html>
+<style>
+    body{
+    background-color:#383735;
+   }
+h1{
+    color:#e9f0e9;
+    margin-left:43%;
+  }
+#plots{
+    margin:auto;
+    background-color: #2e2d2d;
+    }
+</style>

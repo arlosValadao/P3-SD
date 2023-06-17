@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+  <h3> Dados analogicos</h3>
+  <canvas id="myChart"></canvas>
+  
+  <script>
+    // Create a canvas element for the chart
+    var ctx = document.getElementById('myChart').getContext('2d');
+    
+    // Retrieve data from Flask template variable
+    var data = data;
+    
+    // Extract the 'data' array from the JSON string
+    data = JSON.parse(data);
+
+    // Create the chart with the data
+    var myChart = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: data.map(function(_, index) { return 'Label ' + index; }),
+        datasets: [{
+          label: 'Data',
+          data: data,
+          backgroundColor: 'rgba(54, 162, 235, 0.5)',
+          borderColor: 'rgba(54, 162, 235, 1)',
+          borderWidth: 1
+        }]
+      },
+      options: {
+        scales: {
+          y: {
+            beginAtZero: true
+          }
+        }
+      }
+    });
+  </script>
+</body>
+</html>
+
