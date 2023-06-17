@@ -10,7 +10,7 @@
 
 const char* ssid = STASSID;
 const char* password = STAPSK;
-const char* host = "ESP-10.0.0.107";
+const char* host = "ESP-10.0.0.108";
 
 int led_pin = LED_BUILTIN;
 #define N_DIMMERS 3
@@ -88,16 +88,13 @@ void loop() {
     recvd = Serial.read();
     if(recvd == NODE_ID) {
       selectedUnit = true;
-      digitalWrite(LED_BUILTIN, HIGH);
+      digitalWrite(LED_BUILTIN, LOW);
       Serial.write(NODE_ID);
     }
     if(recvd == DESELECT_NODE) {
       selectedUnit = false;
       Serial.write(DESELECT_NODE);
-      digitalWrite(LED_BUILTIN, LOW);
-      delay(2000);
       digitalWrite(LED_BUILTIN, HIGH);
-      delay(2000);
     }
     if(selectedUnit && recvd != NODE_ID) {
       switch(recvd) {
