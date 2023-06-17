@@ -1,5 +1,6 @@
 <!DOCTYPE html>
     <head>
+        <meta http-equiv="refresh" content="5">
         <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     </head>
     <body>
@@ -21,7 +22,7 @@
             var values = data;
             const canvas = document.createElement('canvas');
             document.body.appendChild(canvas);
-
+            // const canvas = document.getElementById('myChart').getContext('2d');
             // Create a new chart using Chart.js
             new Chart(canvas, {
                 type: 'line', // Specify the type of chart (e.g., bar, line, pie)
@@ -42,12 +43,12 @@
                     }
                 }
             });
-        })       
+        })     
         .catch(error => {
             console.error('Error:', error);
         });
 </script>
-
+<!-- 
 <style>
     body{
     background-color:#383735;
@@ -63,4 +64,4 @@ h3{
     margin:auto;
     background-color: #2e2d2d;
 }
-</style>
+</style> -->
