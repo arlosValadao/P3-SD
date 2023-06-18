@@ -13,29 +13,23 @@ app.config['MQTT_TLS_ENABLED'] = False  # If your server supports TLS, set it Tr
 topic = 'MQTTSBC'
 mqtt_client = Mqtt(app)
 CORS(app)  # Enable CORS for all routes
-# ids de todas as nodes conectadas
-ids = {
-        "analog": [],
-        "digital": [],
-      }
 
 dados = []
-        # {
-        # "analog": [],
-        # "digital": [],
-        # }
 
-dados_node1 = {
-    "digital0": [],
-    "digital1": [],
-    "analog0": []
-}
+# dados_node1 = {
+#     "digital0": [],
+#     "digital1": [],
+#     "analog0": []
+# }
 
-dados_node2 = {
-    "digital0": [],
-    "digital1": [],
-    "analog0": []
-}
+# dados_node2 = {
+#     "digital0": [],
+#     "digital1": [],
+#     "analog0": []
+# }
+
+dados_node1 = []
+dados_node2 = []
 
 """
 " { \"Node\" : \"0x1\", \"D0\" : \"1\", \"D1\" : \"1\", \"A0\" : \"962\" }, 
@@ -68,40 +62,108 @@ msg_agrupada = []
 
 # msg_payload = ['0x1','0x81','0xC3','0xC5','0xC1','0x2','0x82','0xC3','0xC5','0xC1']
 # whatever = []
-
+data = {}
 
 @mqtt_client.on_message()
 def handle_mqtt_message(client, userdata, message):
-    valor_d0_node1 = 0
-    valor_d1_node1 = 0
-    valor_a0_node1 = 0
     
-    data = {} 
     data['topic'] = message.topic
     data['payload'] = message.payload.decode()
 
-    dados_mqtt_json = json.loads(message.payload.decode())
-    print("dados de mqtt")
-    print(json.dumps(dados_mqtt_json))
+    dados.append(data.get('payload'))
+    # print("dados")
+    # print(dados)
 
+    # print(json.loads(dados[0]))
+    if (len(dados) >= 1):
+        for node in dados:
+            unit = json.loads(node).get('Node')
+            d0 = json.loads(node).get('D0')
+            d1 = json.loads(node).get('D1')
+            a0 = json.loads(node).get('A0')
+            if unit == '0x1':
+                print(unit)
+                dados_node1.append((d0,d1,a0))
+                if len(dados_node1) == 11:
+                    dados_node1.pop(0)
+                print(len(dados_node1))
+                # dados_node1['digital0'].append(d0)
+                # dados_node1['digital0'].append(d1)
+                # dados_node1['analog0'].append(a0)
+            elif unit == '0x2':
+                dados_node2.append((d0,d1,a0))
+                # dados_node2['digital0'].append(d0)
+                # dados_node2['digital0'].append(d1)
+                # dados_node2['analog0'].append(a0)
 
-    # print(message.topic)
-    # print(message.payload.decode())
-    # print("asdkaslkdkasldklaskdlakl")
-    # print(data['payload'])
-    # print(data.get('payload'))
-
-    # whatever.append(data['payload'])
-
-    dados.append(str(data.get('payload')))
-    print("dados")
-    print(dados)
+            # print('NODE '+json.loads(dados[0]).get('Node'))
+            # print('D0 '+json.loads(dados[0]).get('D0'))
+            # print('D1 '+json.loads(dados[0]).get('D1'))
+            # print('A0 '+json.loads(dados[0]).get('A0')) 
 
     if len(dados) == 11:
         dados.pop(0)
-        print(json.dumps(dados))
 
-    """
+"""
+NAO ESTA SENDO USADA
+@app.route('/publish', methods=['POST'])
+def publish_message():
+   request_data = request.get_json()
+   publish_result = mqtt_client.publish(request_data['topic'], request_data['msg'])
+   return jsonify({'code': publish_result[0]})
+"""
+
+@app.route('/', methods=['GET','POST'])
+def index():
+    if request.method == 'GET': 
+        # print('index funfando')
+        # print(json.dumps(dados))
+        for node in dados:
+            unit = json.loads(node).get('Node')
+            d0 = json.loads(node).get('D0')
+            d1 = json.loads(node).get('D1')
+            a0 = json.loads(node).get('A0')
+
+        return json.dumps(dados)
+        # print(json.dumps(dados_node1.get("digital0")))
+        # return json.dumps(dados_node1.get("digital0"))
+        # return render_template("chartgpt.html", title="OverviewAnalog", data = json.dumps(dados['analog']))
+
+@app.route('/node1', methods=['GET','POST'])
+def node1():
+    if request.method == 'GET':
+        # print("dados_node1")
+        # print(dados_node1)
+        print(json.dumps(dados_node1))
+        return json.dumps(dados_node1)
+
+@app.route('/node1/d0', methods=['GET','POST'])
+def node1_d0():    
+    list_d0 = []
+    if request.method == 'GET':
+        print(len(dados_node1))
+        for index in range(0,(len(dados_node1))):
+            list_d0.append(dados_node1[index][0])
+        print(list_d0)
+        return json.dumps(list_d0)    
+
+# @app.route('/node2', methods=['GET','POST'])
+if __name__ == "__main__":
+    app.run(host='127.0.0.1', port=8000)
+
+"""
+#    if "0x1" in str(data.get('payload')):
+   if 'Analog' in str(data.get('payload')):
+        ids['analog'].append(json.loads(data.get('payload'))['Id'])
+        dados['analog'].append(json.loads(data.get('payload'))['Analog'])
+
+        if len(dados['analog']) == 11:
+            dados['analog'].pop(0)
+        print(json.dumps(dados['analog']))
+"""
+
+
+"""
         for i in range(10):
             if '0x1' in dados[i] and i <= 6:
                 print('inserindo dados da node 1')
@@ -165,42 +227,16 @@ def handle_mqtt_message(client, userdata, message):
     #         dados['analog'].pop(0)
         # print(json.dumps(dados['analog']))s
 
-@app.route('/publish', methods=['POST'])
-def publish_message():
-   request_data = request.get_json()
-   publish_result = mqtt_client.publish(request_data['topic'], request_data['msg'])
-   return jsonify({'code': publish_result[0]})
 
-@app.route('/', methods=['GET','POST'])
-def index():
-    if request.method == 'GET': 
-        print('index funfando')
-        print(json.dumps(dados))
-        return json.dumps(dados)
-        # print(json.dumps(dados_node1.get("digital0")))
-        # return json.dumps(dados_node1.get("digital0"))
-        
-        # return render_template("chartgpt.html", title="OverviewAnalog", data = json.dumps(dados['analog']))
+        # dados_mqtt_json = message.payload.decode()
+    # print("dados de mqtt")
+    # print(json.dumps(dados_mqtt_json))
 
-@app.route('/node1', methods=['GET','POST'])
-def node1():
-    if request.method == 'GET':
-        return json.dumps(dados)
+    # print(message.topic)
+    # print(message.payload.decode())
+    # print("asdkaslkdkasldklaskdlakl")
+    # print(data['payload'])
+    # print(data.get('payload'))
 
-
-# @app.route('/node2', methods=['GET','POST'])
-
-
-if __name__ == "__main__":
-    app.run(host='127.0.0.1', port=8000)
-
-"""
-#    if "0x1" in str(data.get('payload')):
-   if 'Analog' in str(data.get('payload')):
-        ids['analog'].append(json.loads(data.get('payload'))['Id'])
-        dados['analog'].append(json.loads(data.get('payload'))['Analog'])
-
-        if len(dados['analog']) == 11:
-            dados['analog'].pop(0)
-        print(json.dumps(dados['analog']))
-"""
+    # whatever.append(data['payload'])
+    # print(str(data.get('payload')))

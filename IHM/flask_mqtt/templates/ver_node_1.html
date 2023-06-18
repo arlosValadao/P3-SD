@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+    <head>
+        <!-- <meta http-equiv="refresh" content="5"> -->
+        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+        <style>
+            .active {
+                background-color: black;
+                color: white;
+            }
+        </style>
+    </head>
+    <body>
+        <h3> Grafico</h3>
+        <button id="D0">D0</button>
+        <input type="button" value="D1" onclick="toggleD1()">
+        <input type="button" value="A0" onclick="toggleD2()">
+    </body>
+</html>
+
+<script>
+    const button = document.getElementById('D0');
+
+    var values_digital0 = [];
+    var values_digital1 = [];
+    var values_analog = [];
+    
+    fetch('http://localhost:5000/node1')
+        .then(response => response.json())
+        .then(data => {
+            console.log("alsdjklaskdlakd")
+            console.log(data)
+            console.log(data[0])
+            // Extract the required data from the API response
+            // Create a canvas element in your HTML to render the chart
+            // const values = data.map(entry => entry.value);
+            for(let i = 0; i < 10; i++){
+                values_digital0.push(data[i][0]);
+                values_digital1.push(data[i][1]);
+                values_analog.push(data[i][2]);
+            }
+            // const canvas = document.getElementById('myChart').getContext('2d');
+            // Create a new chart using Chart.js
+        })     
+        .catch(error => {
+            console.error('Error:', error);
+        });
+        
+    function addData(chart, label, data) {
+        chart.data.labels.push(label);
+        chart.data.datasets.forEach((dataset) => {
+            dataset.data.push(data);
+        });
+        chart.update();
+    }
+
+    function removeData(chart) {
+        chart.data.labels.pop();
+        chart.data.datasets.forEach((dataset) => {
+            dataset.data.pop();
+        });
+        chart.update();
+    }
+
+    const canvas = document.createElement('canvas');
+    document.body.appendChild(canvas);
+    const labels = ["1","2","3","4","5","6","7","8","9","10"];
+    var myChart = new Chart(canvas, {
+                    type: 'line', // Specify the type of chart (e.g., bar, line, pie)
+                    data: {
+                        labels: labels, // Set the labels for the X-axis
+                        datasets: [{
+                            label: 'node 1 (sensor D0)', // Set the label for the dataset
+                            data: values_digital0, // Set the values for the Y-axis
+                            backgroundColor: 'rgba(0, 123, 255, 0.5)' // Set the background color for the bars
+                        },
+                        {
+                            label: 'node 1 (sensor D1)', // Set the label for the dataset
+                            data: values_digital1, // Set the values for the Y-axis
+                            backgroundColor: 'rgba(0, 120, 0, 1.0)' // Set the background color for the bars
+                        },
+                        {
+                            label: 'node 1 (sensor A0)', // Set the label for the dataset
+                            data: values_analog, // Set the values for the Y-axis
+                            backgroundColor: 'rgba(0, 221, 1, 1.1)' // Set the background color for the bars
+                        }
+                    ]
+                    },
+                    options: {
+                        responsive: true, // Make the chart responsive
+                        scales: {
+                            y: {
+                                beginAtZero: true // Start the Y-axis at zero
+                            }
+                        }
+                    }
+    });
+
+    // Function to update the chart data
+    function updateChart(myChart) {
+        // Add new label and data point
+            // var newDataPoint = Math.random() * 100; // Example random data point 
+            // chart.data.labels.push('New Label');
+        // fetch('http://localhost:5000/node1')
+        //     .then(response => response.json())
+        //     .then(data => {   
+
+        //     })  
+        console.log("LULAAAA")
+        // console.log(values_digital0.length)
+        console.log(values_digital1.length)
+
+        var dataPointD0 = values_digital0[0][0];
+        var dataPointD1 = values_digital1[0][0];
+        var dataPointA0 = values_analog[0][0];
+        
+        console.log(dataPointD0);
+        console.log(dataPointD1);
+        console.log(dataPointA0);
+
+        myChart.data.datasets[0].data.push(dataPointD0);
+        myChart.data.datasets[1].data.push(dataPointD1);
+        myChart.data.datasets[2].data.push(dataPointA0);
+
+        // Remove the first element if the array length exceeds a certain limit
+        var maxDataPoints = 10; // Example maximum number of data points
+        if (myChart.data.labels.length > maxDataPoints) {
+            // myChart.data.labels.shift();
+            myChart.data.datasets[0].data.shift();
+            myChart.data.datasets[1].data.shift();
+            myChart.data.datasets[2].data.shift();
+        }
+
+        // Update the chart
+        myChart.update();
+    }
+    
+    function myTimer(chart) {
+        updateChart(chart);
+        console.log("ATUALIZANDO GRAFICO")
+    }
+    // myTimer.theChart = myChart;
+    // myChart = returnChart();
+    // console.log("myChart");
+    // console.log(myChart);
+    setInterval(myTimer.bind(null, myChart), 1000);
+    // setInterval(myTimer.bind(myChart), 1000);
+</script>
+
+<!-- 
+<style>
+    body{
+    background-color:#383735;
+   }
+h1{
+    color:#e9f0e9;
+    margin-left:43%;
+  }
+h3{
+    color: white;
+}
+#plots{
+    margin:auto;
+    background-color: #2e2d2d;
+}
+</style> -->
+
+<script>
+// button.addEventListener('click', function() {
+    //   if (button.classList.contains('active')) {
+    //     button.classList.remove('active');
+    //     // button.textContent = 'Toggle';
+    // } else {
+    //     button.classList.add('active');
+    //     myChart.data.datasets.pop();
+    //     myChart.update();
+    //     // button.textContent = 'Untoggle';
+    //     }
+    // });
+</script>
