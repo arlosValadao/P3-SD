@@ -9,8 +9,6 @@
 #include "MQTTClient.h"
 #include "pthread.h"
 
-
-
 //USE WIRINGPI PIN NUMBERS
 #define LCD_RS  13               //Register select pin
 #define LCD_E   18               //Enable Pin
@@ -22,7 +20,7 @@
 #define BUTTON_UP  23         // PA10
 #define BUTTON_ENTER  19         // PA20
 
-#define SIZE_MENU_1 66
+#define SIZE_MENU_1 34
 #define SIZE_MENU_2 9
 #define TURN_BACK (SIZE_MENU_2 - 1)
 #define EXIT      availableUnits
@@ -36,7 +34,7 @@
 
 #define CONSULT     index % 2
 #define MONITORING !(CONSULT)
-#define MAX_UNITS 32
+#define MAX_UNITS 16   // Referente ao maximo de unidades de cada Tipo (UART e MQTT, 32 ao todo)
 
 // Configurações do MQTT
 #define ADDRESS     "tcp://10.0.0.101:1883@@luno*123"
@@ -57,17 +55,14 @@ char respostaMQTT[100] = "0";
 
 char MQTTselectNode[MAX_UNITS][5] = {
                                         "0x1", "0x2", "0x3", "0x4", "0x5", "0x6", "0x7",
-                                        "0x8", "0x9", "0xA", "0xB", "0xC", "0xD", "0xE", "0xF" ,"0x10", "0x11",
-                                        "0x12", "0x13", "0x14", "0x15", "0x16", "0x17", "0x18", "0x19",
-                                        "0x1A", "0x1B", "0x1C", "0x1D", "0x1E", "0x1F", "0x20"
+                                        "0x8", "0x9", "0xA", "0xB", "0xC", "0xD", "0xE", "0xF" ,"0x10"
                                     };
 
 char MQTTdeselectNode[MAX_UNITS][5] = {   
                                     "0x81", "0x82", "0x83", "0x84", "0x85", "0x86", "0x87",
                                     "0x88", "0x89", "0x8A", "0x8B", "0x8C", "0x8D", "0x8E", "0x8F",
-                                    "0x90", "0x91", "0x92", "0x93", "0x94", "0x95", "0x96", "0x97",
-                                    "0x98", "0x99", "0x9A", "0x9B", "0x9C", "0x9D", "0x9E", "0x9F", "0xA0"
-                                };
+                                    "0x90" 
+                                    };
 
 
 int pausarThread = 0;
@@ -122,20 +117,14 @@ int enviarMensagemMQTT(const char* topico, const char* mensagem) {
 void* eviarDadosParaInterface(void *arg){
     char varEnviar[200] = "";
     while(1){ 
-        //printf("%d", pausarThread);
         delay(5);
         if (pausarThread == 0 ){ 
-            sprintf(varEnviar, "\0");
-            
+            sprintf(varEnviar, "");
             for(int i = 0; i < qtd; i++){
-
-                //printf("%s\n", UNIDADES_MQTT_SELECT[i]);
-                
                 enviarMensagemMQTT(TOPICO, UNIDADES_MQTT_SELECT[i]);
                 delay(25);
-                
                 sprintf(varEnviar, "%s { \"Node\" : \"%s\",", varEnviar, UNIDADES_MQTT_SELECT[i]);
-
+                
                 enviarMensagemMQTT(TOPICO, "0xC3");
                 delay(25);
                 sprintf(varEnviar, "%s \"D0\" : \"%s\",", varEnviar, respostaMQTT);
@@ -176,11 +165,6 @@ int mensagemRecebida(void* context, char* topicName, int topicLen, MQTTClient_me
 
     MQTTClient_freeMessage(&message);
     MQTTClient_free(topicName);
-
-    // if(strcmp(topicName, "interfacePublicar") == 0){   
-    //     topicName = "";  
-    //     eviarDadosParaInterface();
-    // }
     return 1;
 }
 
@@ -203,8 +187,6 @@ int verificarNodeNaRede(char* node){
     }
     return 0;
 }
-
-
 
 
 // Funções UART
@@ -303,41 +285,23 @@ int main() {
     // Var para MQTT
     int rc;
 
-    //unsigned char analogBytes[2];
-    //unsigned char followCommands[] = { 0xF0, 0xF1, 0xF2, 0xF3, 0xF4, 0xF5, 0xF6 };
     char monitoringLabels[3][10] = { {"D0"}, {"D1"}, {"A0"} };
     char monitoringLabels2[3][10] = { {"A0"}, {"D0"}, {"D1"} };
     unsigned char monitoringArray[] = { 0xC3, 0xC5, 0xC1 };
     unsigned char consultCommands[] = { 0xC0, 0xC1, 0xC2, 0xC3, 0xC4, 0xC5, 0xC6, 0xC7 };
     unsigned char selectNode[MAX_UNITS] = {
                                         0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7,
-                                        0x8, 0x9, 0xA, 0xB, 0xC, 0xD, 0xE, 0xF ,0x10, 0x11,
-                                        0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19,
-                                        0x1A, 0x1B, 0x1C, 0x1D, 0x1E, 0x1F, 0x20
+                                        0x8, 0x9, 0xA, 0xB, 0xC, 0xD, 0xE, 0xF ,0x10
                                     };
     unsigned char deselectNode[MAX_UNITS] = {   
                                         0x81, 0x82, 0x83, 0x84, 0x85, 0x86, 0x87,
                                         0x88, 0x89, 0x8A, 0x8B, 0x8C, 0x8D, 0x8E, 0x8F,
-                                        0x90, 0x91, 0x92, 0x93, 0x94, 0x95, 0x96, 0x97,
-                                        0x98, 0x99, 0x9A, 0x9B, 0x9C, 0x9D, 0x9E, 0x9F, 0xA0
+                                        0x90
                                     };
     
     // Definição de comandos MQTT
     char* monitoringArrayMQTT[3] = { "0xC3", "0xC5", "0xC1"};
-    // char MQTTselectNode[MAX_UNITS][5] = {
-    //                                     "0x1", "0x2", "0x3", "0x4", "0x5", "0x6", "0x7",
-    //                                     "0x8", "0x9", "0xA", "0xB", "0xC", "0xD", "0xE", "0xF" ,"0x10", "0x11",
-    //                                     "0x12", "0x13", "0x14", "0x15", "0x16", "0x17", "0x18", "0x19",
-    //                                     "0x1A", "0x1B", "0x1C", "0x1D", "0x1E", "0x1F", "0x20"
-    //                                 };
 
-    // char MQTTdeselectNode[MAX_UNITS][5] = {   
-    //                                     "0x81", "0x82", "0x83", "0x84", "0x85", "0x86", "0x87",
-    //                                     "0x88", "0x89", "0x8A", "0x8B", "0x8C", "0x8D", "0x8E", "0x8F",
-    //                                     "0x90", "0x91", "0x92", "0x93", "0x94", "0x95", "0x96", "0x97",
-    //                                     "0x98", "0x99", "0x9A", "0x9B", "0x9C", "0x9D", "0x9E", "0x9F", "0xA0"
-    //                                 };
-    
     char MQTTconsultCommands[8][5] = { "0xC0", "0xC1", "0xC2", "0xC3", "0xC4", "0xC5", "0xC6", "0xC7" };
 
     // Menus
@@ -364,7 +328,6 @@ int main() {
     // Inicializar MQTT
     iniciarMQTT();
     escutarTopicoMQTT(TOPICO_ESCUTA);
-    //escutarTopicoMQTT("interfacePublicar");
 
     // Setar botões como entrada
     pinMode(BUTTON_DOWN, INPUT);
@@ -385,7 +348,6 @@ int main() {
         return 1;
     }
 
-    //lcdClear(lcdfd);
     serialFlush(uartfd);
 
     // DESCOBRINDO UNIDADES ONLINES
@@ -447,12 +409,6 @@ int main() {
         }
     }
 
-    //for (int i = 0; i < qtd; i++){
-    //    printf("Select Node %s \n", MQTTselectNode[i]);
-    //    printf("Deselect Node %s \n", MQTTdeselectNode[i]);
-    // }
-
-
     sprintf(vetor_menu01[availableUnits], "Monitor All");
     availableUnits++;
     sprintf(vetor_menu01[availableUnits], "Sair");
@@ -461,26 +417,21 @@ int main() {
     
     pthread_t thread;
     int result = pthread_create(&thread, NULL, eviarDadosParaInterface, NULL);
-    //printf("%d\n", result);
     if(result == 0){
         printf("Dados sendo mandados para interface. \n");
     }
 
     while(TRUE){
         //eviarDadosParaInterface(qtd);
-
         // Verificar se algum botão foi pressionado
         buttonDownState = digitalRead(BUTTON_DOWN);
         buttonUpState = digitalRead(BUTTON_UP);
         buttonEnterState = digitalRead(BUTTON_ENTER);
-        
         // Delay de debounce
         delay(200);
-        
         if (!buttonDownState) {
             // O botão foi pressionado
             index++;
-            
             // Verificar se o que vai ser mostrado é o menu 1 ou 2
             if (meun1Active) {
                 // Se posição passar da quantidade de itens do menu, levar para a posição zero do menu
@@ -492,12 +443,10 @@ int main() {
                 refreshPos(&index, SIZE_MENU_2);
                 lcdddPuts(lcdfd, vetor_menu02[index], 0);
             }
-        
         }
         else if (!buttonUpState) {
             // O botão foi pressionado
             index--;
-
             // Verificar se o que vai ser mostrado é o menu 1 ou 2
             if (meun1Active) {
                 // Se posição for menor que a quantidade de itens do menu, levar para a posição 32 do menu
@@ -509,7 +458,6 @@ int main() {
                 refreshPos(&index, SIZE_MENU_2);
                 lcdddPuts(lcdfd, vetor_menu02[index], 0);
             }
-        
         }
         else if (!buttonEnterState) {
             // O botão foi pressionado
@@ -520,7 +468,6 @@ int main() {
                     lcdddPuts(lcdfd, ":[", 0);
                     pthread_join(thread, NULL);
                     break;
-
                 }else if (choiceMenu1 == availableUnits - 1){ // Monitorar tudo em todas as nodes
                     pausarThread = 1;
                     delay(500);
@@ -538,7 +485,6 @@ int main() {
                                 idxMonitoring = 0;
                                 while(digitalRead(BUTTON_DOWN)) {
                                     serialFlush(uartfd);
-                                    //recvData = recvDigitalData(uartfd);
                                     lcdClear(lcdfd);
                                     sendData(uartfd, monitoringArray, idxMonitoring);
                                     if(idxMonitoring == 2) recvData = recvAnalogData(uartfd);
@@ -552,7 +498,6 @@ int main() {
                                     idxMonitoring++;
                                 }
                                 // Tirar seleção da node
-                                //lcdddPuts(lcdfd, "Deselecting the unit...", TWO_SECONDS);
                                 sendData(uartfd, deselectNode, i);
                                 recvData = recvDigitalData(uartfd);
                                 printf("DESELECT RECV DATA -> %d\n", recvData);
@@ -560,8 +505,6 @@ int main() {
                                 printf("\nDADOS DA MQTT\n");
                                 rc = verificarNodeNaRede(MQTTselectNode[i - (cont3)]);
                                 lcdddPuts(lcdfd, "Selecting Unit MQTT...", 1000); // 1 segundo de espera
-                                //delay(25);
-                                //silas
                                 if(rc == 1){
                                     printf("NODE SELECIONADA \n");
                                 }
@@ -582,7 +525,6 @@ int main() {
                                     idxMonitoring++;
                                 }
                                 // Tirar seleção da node
-                                //lcdddPuts(lcdfd, "Deselecting the unit...", TWO_SECONDS);
                                 enviarMensagemMQTT(TOPICO, MQTTdeselectNode[i - (cont3)]);
                                 delay(100);
                                 printf("DESELECT RECV DATA -> %s\n", respostaMQTT);
@@ -593,7 +535,6 @@ int main() {
                     }
                     pausarThread = 0;
                     delay(500);
-                    //  lcdPuts(lcdfd, "SAINDO DO MONITORAMENTO");
                     while(!digitalRead(BUTTON_DOWN));
                     lcdddPuts(lcdfd, vetor_menu01[index], 0);
                     continue;
@@ -607,11 +548,9 @@ int main() {
                         sendData(uartfd, selectNode, index);
                         // Salva a index da node selecionada no vetor de ID das Nodes
                         recvData = recvDigitalData(uartfd);
-                        // lcdClear(lcdfd);
                         if(recvData > -1) {
                             printf("SELECT RECV DATA -> %d\n", recvData);
                             selectedNode = index;
-                            //serialPutchar(fd, select_node[index - 1]);
                             // Desabilita menu 1
                             meun1Active = FALSE;
                             // Habilita menu 2
@@ -677,7 +616,6 @@ int main() {
                         printf("DESELECT RECV DATA -> %d\n", recvData);
                         pausarThread = 0;
                         delay(500);
-                        //serialPutchar(fd, deselect_node[index - 1]);
                         meun1Active = TRUE;
                         menu2Active = FALSE;
                         index = choiceMenu1;

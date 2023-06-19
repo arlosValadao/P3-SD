@@ -6,7 +6,6 @@
 #include <WiFiUdp.h>
 #include <string.h> 
 
-
 #ifndef STASSID
 #define STASSID "INTELBRAS"
 #define STAPSK  "Pbl-Sistemas-Digitais"
@@ -16,18 +15,17 @@ const char* ssid = STASSID;
 const char* password = STAPSK;
 
 //ESP na rede
-const char* host = "ESP-10.0.0.107";
-IPAddress local_IP(10, 0, 0, 107);
+const char* host = "ESP-10.0.0.111";
+IPAddress local_IP(10, 0, 0, 111);
 IPAddress gateway(10, 0, 0, 1);
 IPAddress subnet(255, 255, 0, 0);
 
 // Definições do servidor MQTT
-//const char* BROKER_MQTT = "broker.emqx.io";  // broker MQTT 
 const char* BROKER_MQTT = "10.0.0.101";        // broker MQTT 
 int BROKER_PORT = 1883;
               
 // Definições do ID
-#define ID_MQTT   "ESP-107"  // ID desta nodeMCU (ID Client)
+#define ID_MQTT   "ESP-111"  // ID desta nodeMCU (ID Client)
 #define USER      "aluno"
 #define PASSWORD  "@luno*123"
 #define QOS       1
@@ -38,12 +36,7 @@ PubSubClient MQTT(wifiClient);   // Instancia o Cliente MQTT passando o objeto e
 #define SBC_ESP           "MQTTNode"
 
 // Topicos a serem publicados
-#define SENSORES_D        "MQTTSBC"
-#define SENSORES_A        "MQTTSBC"
-#define SENSOR_ANALOG     "MQTTSBC"
-#define SENSOR_DIGITAL    "MQTTSBC"
-#define STATUS            "MQTTSBC"
-#define LED               "MQTTSBC"
+#define SENSORES        "MQTTSBC"
 
 #define NODE_ID "0x1"
 #define DESELECT_NODE "0x81"
@@ -65,15 +58,15 @@ void reconnectMQTT() {
   while (!MQTT.connected()) {
     Serial.print("* Tentando se conectar ao Broker MQTT: ");
     Serial.println(BROKER_MQTT);
-    if (MQTT.connect(ID_MQTT, USER, PASSWORD, SBC_ESP, QOS, false, "1F")){
+     if (MQTT.connect(ID_MQTT, USER, PASSWORD)){ 
       Serial.println("Conectado com sucesso ao broker MQTT!");
-      MQTT.subscribe(SBC_ESP, 1); 
     } else{
       Serial.println("Falha ao se reconectar no broker!");
       Serial.println("\nTentando se conectar em 2s...\n");
       delay(2000);
     }
   }
+  MQTT.subscribe(SBC_ESP, 1); 
 }
 
 /**
@@ -109,11 +102,11 @@ void checkMQTTConnection(void) {
 void medicoes(void){
   char digitais[3];                     // D0 e D1
   sprintf(digitais, "%d%d%", digitalRead(16), digitalRead(5));
-  MQTT.publish(SENSORES_D, digitais);   // envia atualizacao para o topico dos sensores digitais
+  MQTT.publish(SENSORES, digitais);   // envia atualizacao para o topico dos sensores digitais
   
   char analogicos[5];
   sprintf(analogicos, "%d", analogRead(17)); 
-  MQTT.publish(SENSORES_A, analogicos); // envia atualizacao para o topico dos sensores analogicos
+  MQTT.publish(SENSORES, analogicos); // envia atualizacao para o topico dos sensores analogicos
 }
 
 /**
@@ -191,23 +184,15 @@ void on_message(char* topic, byte* payload, unsigned int length){
       char c = (char) payload[i];
       recvd += c;
     }
-//    digitalWrite(LED_BUILTIN,LOW);
-//    delay(50);
-//    digitalWrite(LED_BUILTIN,HIGH);
-//    delay(50);
-//    MQTT.publish(SENSORES_D, "ESPMQTTTest"); 
     if(recvd == NODE_ID) {
       selectedUnit = true;
-      digitalWrite(LED_BUILTIN, HIGH);
-      MQTT.publish(SENSORES_D, NODE_ID);
+      digitalWrite(LED_BUILTIN, LOW);
+      MQTT.publish(SENSORES, NODE_ID);
     }
     if(recvd == DESELECT_NODE) {
       selectedUnit = false;
-      MQTT.publish(SENSORES_D, DESELECT_NODE);
-      digitalWrite(LED_BUILTIN, LOW);
-      delay(2000);
+      MQTT.publish(SENSORES, DESELECT_NODE);
       digitalWrite(LED_BUILTIN, HIGH);
-      delay(2000);
     }
     if(selectedUnit && recvd != NODE_ID) {
       // Acender LED
@@ -216,25 +201,20 @@ void on_message(char* topic, byte* payload, unsigned int length){
       // Consultar D0
       else if(recvd == CONSULT_D0) {
             sprintf(data, "%d", digitalRead(16));
-            MQTT.publish(SENSORES_D, data);
+            MQTT.publish(SENSORES, data);
       }
       // Consultar D1
       else if(recvd == CONSULT_D1) {
         sprintf(data, "%d", digitalRead(5));
-        MQTT.publish(SENSORES_D, data);
+        MQTT.publish(SENSORES, data);
       }
       // Consultar A0
       else if(recvd == CONSULT_A0) {
-        char analogPt1[2], analogPt2[2];
-        int analogData, quocient, rest;
+        char analogPt[4];
+        int analogData;
         analogData = analogRead(17);
-        quocient = analogData / 10;
-        rest = analogData % 10;
-        sprintf(analogPt1, "%d", quocient);
-        sprintf(analogPt2, "%d", rest);
-        MQTT.publish(SENSORES_A, analogPt1);
-        delay(2);
-        MQTT.publish(SENSORES_A, analogPt2);
+        sprintf(analogPt, "%d", analogData);
+        MQTT.publish(SENSORES, analogPt);
       }
     } // if de comandos
   }

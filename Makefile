@@ -45,7 +45,7 @@ SRC	=	blink.c blink8.c blink12.c					\
 		lcd.c lcd-adafruit.c clock.c					\
 		nes.c								\
 		softPwm.c softTone.c 						\
-		delayTest.c serialRead.c serialTest.c okLed.c ds1302.c		\
+		delayTest.c serialRead.c serialTest.c okLed.c ds1302.c main.c		\
 		lowPower.c							\
 		max31855.c							\
 		rht03.c								\
@@ -138,6 +138,10 @@ serialRead:	serialRead.o
 serialTest:	serialTest.o
 	$Q echo [link]
 	$Q $(CC) -o $@ serialTest.o $(LDFLAGS) $(LDLIBS)
+
+main:	main.o
+	$Q echo [link]
+	$Q $(CC) -o $@ main.o $(LDFLAGS) $(LDLIBS)
 
 okLed:	okLed.o
 	$Q echo [link]
