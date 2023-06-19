@@ -12,8 +12,11 @@
     <body>
         <h3> Grafico</h3>
         <button id="D0">D0</button>
-        <input type="button" value="D1" onclick="toggleD1()">
-        <input type="button" value="A0" onclick="toggleD2()">
+        <button onclick="toggleChartD0()">Mostrar D0</button>
+        <button onclick="toggleChartD1()">Mostrar D1</button>
+        <button onclick="toggleChartA0()">Mostrar A0</button>
+        <!-- <input type="button" value="D1" onclick="toggleD1()">
+        <input type="button" value="A0" onclick="toggleD2()"> -->
     </body>
 </html>
 
@@ -85,14 +88,14 @@
     }
 
     function toggleChartD1() {
-      var dataset = myChart.data.datasets[0];
+      var dataset = myChart.data.datasets[1];
       dataset.hidden = !dataset.hidden; // Toggle the 'hidden' property
 
       myChart.update(); // Update the chart to reflect the changes
     }
 
     function toggleChartA0() {
-      var dataset = myChart.data.datasets[0];
+      var dataset = myChart.data.datasets[2];
       dataset.hidden = !dataset.hidden; // Toggle the 'hidden' property
 
       myChart.update(); // Update the chart to reflect the changes
@@ -110,20 +113,23 @@
                             label: 'node 1 (sensor D0)', // Set the label for the dataset
                             data: values_digital0, // Set the values for the Y-axis
                             backgroundColor: 'rgba(0, 123, 255, 0.5)', // Set the background color for the bars
+                            borderColor: 'rgba(0, 123, 255, 0.5)', // Set the background color for the bars
                             hidden: false // Initially visible
                         },
                         {
                             label: 'node 1 (sensor D1)', // Set the label for the dataset
                             data: values_digital1, // Set the values for the Y-axis
                             backgroundColor: 'rgba(33, 120, 0, 1.0)', // Set the background color for the bars
+                            borderColor: 'rgba(33, 120, 0, 1.0)', // Set the background color for the bars
                             hidden: false // Initially visible
                         },
                         {
                             label: 'node 1 (sensor A0)', // Set the label for the dataset
                             data: values_analog, // Set the values for the Y-axis
                             backgroundColor: 'rgba(2, 221, 1, 1.1)', // Set the background color for the bars
+                            borderColor: 'rgba(2, 221, 1, 1.1)', // Set the background color for the bars
                             hidden: false // Initially visible
-                        }
+                        },
                     ]
                     },
                     options: {

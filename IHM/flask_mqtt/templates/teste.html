@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    #myButton {
+      padding: 10px 20px;
+      font-size: 16px;
+      background-color: #336699;
+      color: #ffffff;
+      border: none;
+    }
+  </style>
+</head>
+<body>
+  <button id="myButton" onclick="changeBackgroundColor()">Click Me</button>
+
+  <script>
+    function changeBackgroundColor() {
+      var button = document.getElementById("myButton");
+      var colors = ["#000000", "#FFFFFF", "#0000FF", "#FFFF00", "#FF00FF", "#00FFFF"];
+      var currentColor = button.style.backgroundColor;
+
+      if (currentColor === "" || colors.indexOf(currentColor) === colors.length - 1) {
+        button.style.backgroundColor = colors[0];
+      } else {
+        var currentIndex = colors.indexOf(currentColor);
+        button.style.backgroundColor = colors[currentIndex + 1];
+      }
+    }
+  </script>
+</body>
+</html>

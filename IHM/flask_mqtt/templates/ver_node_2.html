@@ -1,64 +1,266 @@
 <!DOCTYPE html>
     <head>
-        <meta http-equiv="refresh" content="5">
+        <!-- <meta http-equiv="refresh" content="11"> -->
         <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+        <style>
+            .active {
+                background-color: black;
+                color: white;
+            }
+        </style>
     </head>
     <body>
         <h3> Grafico</h3>
+        <button onclick="toggleChartD0()">Mostrar D0</button>
+        <button onclick="toggleChartD1()">Mostrar D1</button>
+        <button onclick="toggleChartA0()">Mostrar A0</button>
     </body>
 </html>
 
 <script>
-    fetch('http://localhost:5000/node2')
-        .then(response => response.json())
-        .then(data => {
-            console.log("alsdjklaskdlakd")
-            console.log(data)
-            console.log(data[0])
-            // Extract the required data from the API response
-            const labels = ["1","2","3","4","5","6","7","8","9","10"]
-            // Create a canvas element in your HTML to render the chart
-            // const values = data.map(entry => entry.value);
-            var values = data;
-            const canvas = document.createElement('canvas');
-            document.body.appendChild(canvas);
-            // const canvas = document.getElementById('myChart').getContext('2d');
-            // Create a new chart using Chart.js
-            new Chart(canvas, {
-                type: 'line', // Specify the type of chart (e.g., bar, line, pie)
-                data: {
-                    labels: labels, // Set the labels for the X-axis
-                    datasets: [{
-                        label: 'node 1 (sensor D0)', // Set the label for the dataset
-                        data: values, // Set the values for the Y-axis
-                        backgroundColor: 'rgba(0, 123, 255, 0.5)' // Set the background color for the bars
+    const button = document.getElementById('D0');
+
+    var values_digital0 = [];
+    var values_digital1 = [];
+    var values_analog = [];
+    
+    function makeRequest(){
+        fetch('http://localhost:5000/node2')
+            .then(response => response.json())
+            .then(data => {
+                console.log("0909090")
+                console.log(data)
+                console.log(data[0])
+                // Extract the required data from the API response
+                // Create a canvas element in your HTML to render the chart
+                // const values = data.map(entry => entry.value);
+                
+                // for(let i = 0; i < 10; i++){
+                //     values_digital0.push(data[i][0]);
+                //     values_digital1.push(data[i][1]);
+                //     values_analog.push(data[i][2]);
+                // }
+
+                // console.log("L");
+                // console.log(values_digital0.length);
+                
+                // if (values_digital0.length > 10){
+                //     // while (myChart.data.datasets[0].data.length > 10){
+                //     values_digital0.shift();
+                //     values_digital1.shift();
+                //     values_analog.shift();
+                //     // }
+                // }
+
+                // const canvas = document.getElementById('myChart').getContext('2d');
+                // Create a new chart using Chart.js
+                return data;
+            })     
+            .catch(error => {
+                console.error('Error:', error);
+            });
+    }
+        
+    function addData(chart, data) {
+        // chart.data.labels.push(label);
+        chart.data.datasets.forEach((dataset) => {
+            dataset.data.push(data);
+        });
+        chart.update();
+    }
+
+    function removeData(chart) {
+        chart.data.labels.pop();
+        chart.data.datasets.forEach((dataset) => {
+            dataset.data.pop();
+        });
+        chart.update();
+    }
+
+    function toggleChartD0() {
+      var dataset = myChart.data.datasets[0];
+      dataset.hidden = !dataset.hidden; // Toggle the 'hidden' property
+      myChart.update(); // Update the chart to reflect the changes
+    }
+
+    function toggleChartD1() {
+      var dataset = myChart.data.datasets[1];
+      dataset.hidden = !dataset.hidden; // Toggle the 'hidden' property
+
+      myChart.update(); // Update the chart to reflect the changes
+    }
+
+    function toggleChartA0() {
+      var dataset = myChart.data.datasets[2];
+      dataset.hidden = !dataset.hidden; // Toggle the 'hidden' property
+
+      myChart.update(); // Update the chart to reflect the changes
+    }
+
+
+    const canvas = document.createElement('canvas');
+    document.body.appendChild(canvas);
+    const labels = ["1","2","3","4","5","6","7","8","9","10"];
+    var myChart = new Chart(canvas, {
+                    type: 'line', // Specify the type of chart (e.g., bar, line, pie)
+                    data: {
+                        labels: labels, // Set the labels for the X-axis
+                        datasets: [{
+                            label: 'node 2 (sensor D0)', // Set the label for the dataset
+                            data: values_digital0, // Set the values for the Y-axis
+                            backgroundColor: 'rgba(0, 123, 255, 0.5)', // Set the background color for the bars
+                            borderColor: 'rgba(0, 123, 255, 0.5)', // Set the background color for the bars
+                            hidden: false // Initially visible
+                        },
+                        {
+                            label: 'node 2 (sensor D1)', // Set the label for the dataset
+                            data: values_digital1, // Set the values for the Y-axis
+                            backgroundColor: 'rgba(33, 120, 0, 1.0)', // Set the background color for the bars
+                            borderColor: 'rgba(33, 120, 0, 1.0)', // Set the background color for the bars
+                            hidden: false // Initially visible
+                        },
+                        {
+                            label: 'node 2 (sensor A0)', // Set the label for the dataset
+                            data: values_analog, // Set the values for the Y-axis
+                            backgroundColor: 'rgba(2, 221, 1, 1.1)', // Set the background color for the bars
+                            borderColor: 'rgba(2, 221, 1, 1.1)', // Set the background color for the bars
+                            hidden: false // Initially visible
+                        }
+                    ]
                     },
-                    {
-                        label: 'node 1 (sensor D1)', // Set the label for the dataset
-                        data: values, // Set the values for the Y-axis
-                        backgroundColor: 'rgba(0, 120, 0, 1.0)' // Set the background color for the bars
-                    },
-                    {
-                        label: 'node 1 (sensor A0)', // Set the label for the dataset
-                        data: values, // Set the values for the Y-axis
-                        backgroundColor: 'rgba(0, 221, 1, 1.1)' // Set the background color for the bars
-                    }
-                ]
-                },
-                options: {
-                    responsive: true, // Make the chart responsive
-                    scales: {
-                        y: {
-                            beginAtZero: true // Start the Y-axis at zero
+                    options: {
+                        responsive: true, // Make the chart responsive
+                        scales: {
+                            y: {
+                                beginAtZero: true // Start the Y-axis at zero
+                            }
                         }
                     }
-                }
+    });
+
+
+    // Function to update the chart data
+    function updateChart(myChart, data) {
+        // Add new label and data point
+            // var newDataPoint = Math.random() * 100; // Example random data point 
+            // chart.data.labels.push('New Label');
+        // fetch('http://localhost:5000/node1')
+        //     .then(response => response.json())
+        //     .then(data => {   
+
+        //     })  
+        // for(let i = 0; i < 10; i++){
+            //     var dataPointD0 = values_digital0.push(data_request[i][0]);
+            //     var dataPointD1 = values_digital1.push(data_request[i][1]);
+            //     var dataPointA0 = values_analog.push(data_request[i][2]);
+            // }
+            
+            // console.log(dataPointD0);
+            // console.log(dataPointD1);
+            // console.log(dataPointA0);
+            
+            // myChart.data.datasets[0].data.push(dataPointD0);
+            // myChart.data.datasets[1].data.push(dataPointD1);
+            // myChart.data.datasets[2].data.push(dataPointA0);
+            // console.log(values_digital0.length)
+            // console.log(values_digital1.length)
+            // var dataRequest = this.requestAPI();
+        
+        console.log("LULAAAA")
+        console.log(data);
+
+        console.log(data[0][0]);
+        console.log(data[0][1]);
+        console.log(data[0][2]);
+        
+        // for (let i = 0; i < 10; i++){
+        if(myChart.data.datasets[0].data.length >= 0 || myChart.data.datasets[0].data.length <= 10){
+            myChart.data.datasets[0].data.push(data[0][0]);
+            myChart.data.datasets[1].data.push(data[0][1]);
+            myChart.data.datasets[2].data.push(data[0][2]);
+            myChart.update();
+        }
+        // }
+        // addData(myChart,data[0][0]);
+        // addData(myChart,data[0][1]);
+        // addData(myChart,data[0][2]);
+        myChart.update();
+        // removeData(myChart);
+        console.log('asd');
+        console.log(myChart.data.datasets[0].data.length);
+        if(myChart.data.datasets[0].data.length >= 10){
+            myChart.data.datasets[0].data.shift();
+            myChart.data.datasets[1].data.shift();
+            myChart.data.datasets[2].data.shift();
+            myChart.update();
+            console.log('J inha');
+            console.log(myChart.data.datasets[0].data.length);
+        }
+        myChart.update();
+        
+
+        // IMPORTANTE
+        // // Remove the first element if the array length exceeds a certain limit
+        // if (myChart.data.datasets[0].data.length > 10) {
+        //     // myChart.data.labels.shift();]
+        //     console.log("DILERA")
+        //     // myChart.data.labels.shift();
+        //     myChart.data.datasets[0].data.shift();
+        //     myChart.data.datasets[1].data.shift();
+        //     myChart.data.datasets[2].data.shift();
+        //     console.log('novo tamanho')
+        //     console.log(myChart.data.datasets[0].data.length);
+
+        //     if (myChart.data.datasets[0].data.length > 0 && myChart.data.datasets[0].data.length <= 11 )
+        //     myChart.data.datasets[0].data.push(data[0][0]);
+        //     myChart.data.datasets[1].data.push(data[0][1]);
+        //     myChart.data.datasets[2].data.push(data[0][2]);
+        // }
+        // myChart.update();
+        // IMPORTANTE
+
+
+        // myChart.data.datasets[0].data.push(data[0][0]);
+        // myChart.data.datasets[1].data.push(data[0][1]);
+        // myChart.data.datasets[2].data.push(data[0][2]);
+
+        // Update the chart
+        // myChart.update();
+    }
+    
+    function requestAPI(myChart){
+        fetch('http://localhost:5000/node2')
+            .then(function(response) {
+                return response.json();
+            })
+            .then(function(data) {
+                console.log("alsdjklaskdlakd")
+                console.log(data)
+                console.log(data[0])
+                // return data;
+                updateChart(myChart, data);
+            })
+            .catch(function(error) {
+                // Handle any errors that occurred during the request
+                console.log('An error occurred:', error);
             });
-        })     
-        .catch(error => {
-            console.error('Error:', error);
-        });
+    }
+
+
+    function myTimer(chart) {
+        // updateChart(chart);
+        requestAPI(chart);
+        console.log("ATUALIZANDO GRAFICO");
+    }
+    // myTimer.theChart = myChart;
+    // myChart = returnChart();
+    // console.log("myChart");
+    // console.log(myChart);
+    setInterval(myTimer.bind(null, myChart), 1000);
+    // setInterval(makeRequest, 2500);
+    // setInterval(myTimer.bind(myChart), 1000);
 </script>
+
 <!-- 
 <style>
     body{
@@ -76,3 +278,17 @@ h3{
     background-color: #2e2d2d;
 }
 </style> -->
+
+<script>
+// button.addEventListener('click', function() {
+    //   if (button.classList.contains('active')) {
+    //     button.classList.remove('active');
+    //     // button.textContent = 'Toggle';
+    // } else {
+    //     button.classList.add('active');
+    //     myChart.data.datasets.pop();
+    //     myChart.update();
+    //     // button.textContent = 'Untoggle';
+    //     }
+    // });
+</script>

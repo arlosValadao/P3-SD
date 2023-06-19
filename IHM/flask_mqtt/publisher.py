@@ -63,36 +63,26 @@ def payload(codigo_node:int):
 
 def publish(client):
     while True:
-        for index in range(1,3):
+       for index in range(1,3):
             # z_um = random.randint(0,1)
-            mqtt_payload = '{ \"Node\" : \"0x'+str(index)+'\", \"D0\" : \"'+str(random.randint(0,1))+'"\", \"D1\" : \"'+str(random.randint(0,1))+'\", \"A0\" : \"'+str(random.randint(0,1025))+'\" }'
+            # mqtt_payload = '{ "Node" : "0x'+str(index)+', "D0" : '+str(random.randint(0,1))+', "D1" : "' +str(random.randint(0,1))+ '"A0" : '+str(random.randint(0,1025))+'}'
+            mqtt_payload = {}
+            mqtt_payload["Node"] = '0x'+str(index)
+            #+str(index)
+            mqtt_payload["D0"] = str(random.randint(0,1))
+            mqtt_payload["D1"] = str(random.randint(0,1))
+            mqtt_payload["A0"] = str(random.randint(3,20))
+            # mqtt_payload["A0"] = str(random.randint(0,1025))
+
             print('mqtt_payload '+str(mqtt_payload))
             time.sleep(1)
-            result = client.publish(topic, mqtt_payload)
+            result = client.publish(topic, json.dumps(mqtt_payload))
             status = result[0]
             if status == 0:
                 print(f"Send `{payload}` to topic `{topic}`")
             else:
                 print(f"Failed to send message to topic {topic}")
 
-"""
-payload_list = ['0x1','0xC3','0xC5','0xC1','0x81','0x2','0xC3','0xC5','0xC1','0x82']
-# payload_list = ['0x','0x8','0xC3','0xC5','0xC1']
-def publish(client):
-    msg_count = 1
-    while True:
-        for payload in payload_list:
-            # payload = msg_code+str(index)
-            time.sleep(1)
-            # result: [0, 1]
-            result = client.publish(topic, payload)
-            status = result[0]
-            if status == 0:
-                print(f"Send `{payload}` to topic `{topic}`")
-            else:
-                print(f"Failed to send message to topic {topic}")
-        msg_count += 1
-"""
 
 def run():
     client = connect_mqtt()
@@ -124,4 +114,22 @@ def publish(client):
         msg_count += 1
         #if msg_count > 5:
         #    break
+"""
+"""
+payload_list = ['0x1','0xC3','0xC5','0xC1','0x81','0x2','0xC3','0xC5','0xC1','0x82']
+# payload_list = ['0x','0x8','0xC3','0xC5','0xC1']
+def publish(client):
+    msg_count = 1
+    while True:
+        for payload in payload_list:
+            # payload = msg_code+str(index)
+            time.sleep(1)
+            # result: [0, 1]
+            result = client.publish(topic, payload)
+            status = result[0]
+            if status == 0:
+                print(f"Send `{payload}` to topic `{topic}`")
+            else:
+                print(f"Failed to send message to topic {topic}")
+        msg_count += 1
 """

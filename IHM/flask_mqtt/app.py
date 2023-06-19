@@ -92,6 +92,10 @@ def handle_mqtt_message(client, userdata, message):
                 # dados_node1['analog0'].append(a0)
             elif unit == '0x2':
                 dados_node2.append((d0,d1,a0))
+                if len(dados_node2) == 11:
+                    dados_node2.pop(0)
+                print('tamanho dados node2:')
+                print(len(dados_node2))
                 # dados_node2['digital0'].append(d0)
                 # dados_node2['digital0'].append(d1)
                 # dados_node2['analog0'].append(a0)
@@ -123,11 +127,13 @@ def index():
             d0 = json.loads(node).get('D0')
             d1 = json.loads(node).get('D1')
             a0 = json.loads(node).get('A0')
-
-        return json.dumps(dados)
+        print('json.dumps((dados_node1, dados_node2))')
+        print(json.dumps((dados_node1, dados_node2)))
+        return json.dumps((dados_node1, dados_node2))
         # print(json.dumps(dados_node1.get("digital0")))
         # return json.dumps(dados_node1.get("digital0"))
         # return render_template("chartgpt.html", title="OverviewAnalog", data = json.dumps(dados['analog']))
+
 
 @app.route('/node1', methods=['GET','POST'])
 def node1():
@@ -137,15 +143,13 @@ def node1():
         print(json.dumps(dados_node1))
         return json.dumps(dados_node1)
 
-@app.route('/node1/d0', methods=['GET','POST'])
-def node1_d0():    
-    list_d0 = []
+@app.route('/node2', methods=['GET','POST'])
+def node2():
     if request.method == 'GET':
-        print(len(dados_node1))
-        for index in range(0,(len(dados_node1))):
-            list_d0.append(dados_node1[index][0])
-        print(list_d0)
-        return json.dumps(list_d0)    
+        # print("dados_node1")
+        # print(dados_node1)
+        print(json.dumps(dados_node2))
+        return json.dumps(dados_node2)
 
 # @app.route('/node2', methods=['GET','POST'])
 if __name__ == "__main__":
