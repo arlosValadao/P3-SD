@@ -114,7 +114,7 @@ A fim de averiguar o funcionamento do sistema desenvolvido foram realizados 3 te
 
 No primeiro teste o monitoramento de todas as unidades disponíveis, tanto UART quanto MQTT foi feito. Como é possível ver no vídeo 1, por meio do menu, no menu principal é selecionada a opção “Monitor All”, logo após o processo de monitoramento inicia-se, logo após a única unidade UART disponível é selecionada, e uma mensagem “NODE SELECTED” é exibida no display LCD, simbolizando sucesso ao selecionar tal unidade, logo após as informações dos 3 sensores são exibidas em sequência, “D0”, o sensor digital 0, (push button esquerdo), “D1” (push button direito) e o sensor analógico - A0, após a exibição das informações da unidade UART o sistema parte para as outras unidades de sensoriamento MQTT, uma mensagem “DESELECT NODE” é mostrada indicando sucesso ao deselecionar a unidade UART previamente selecionada. Logo o LED da unidade MQTT é aceso, indicando que ele foi selecionada, a mensagem “NODE SELECTED” é exibida no display LCD indicando sucesso ao selecionar a unidade, feito isso as informações da unidade MQTT são exibidas no display, seguindo o mesmo padrão da(s) unidade(s) UART. O mesmo processo se mantém para as outras unidades MQTT conectadas.
 
-[ MONITOR ALL ]
+https://github.com/arlosValadao/P3-SD/assets/61719667/be01c755-3f03-4afe-bec9-11adf007d56e
 
 Ao analisar, os valores de D0 igual a 0,  e D1 igual a 1, da única unidade de medição UART - de id 1 - reiterando o correto funcionamento do sistema nesse aspecto, levando em consideração que os botões conectados à unidade de medição funcionam em lógica inversa, ou seja quando pressionados assumem nível lógico baixo (0), bem como o valor correspondente em “A0”: 703, é um valor inteiro sem convertido pela própria unidade de medição e pode variar de 0-1023.
 
@@ -122,7 +122,7 @@ Ao analisar, os valores de D0 igual a 0,  e D1 igual a 1, da única unidade de m
 ### 4.2 Segundo Teste
 Enquanto no segundo teste é utilizada uma unidade MQTT, bem como o menu LCD. Como pode-se notar no vídeo 2, a unidade MQTT de Id 2 é selecionada, e logo após uma mensagem é exibida “Success on selecting the unit” indicando sucesso ao selecionar a unidade, por conseguinte é navegado até a opção “Monitoring all of them” é escolhida, esta realiza o monitoramento de todos os 3 sensores conectados à placa ESP8266, “D0”, “D1” e “A0” possuem o mesmo significado do que foi explicado em 4.1. 
 
-[ VIDEO MONITORING ALL MQTTI ]
+https://github.com/arlosValadao/P3-SD/assets/61719667/761a38fd-1a43-44bb-b5be-5a958ec03ed2
 
 Os valores de “D0” e “D1” permanecem em nível lógico alto, reiterando o funcionamento do sistema, como discutido na seção anterior [4.1], enquanto “A0”: oscila o seu valor de inicialmente 354 para 0, após o potenciômetro ser ajustado para o valor mínimo que pode assumir, ratificando novamente a corretude do sistema.
 
@@ -130,7 +130,7 @@ Os valores de “D0” e “D1” permanecem em nível lógico alto, reiterando 
 
 Neste teste uma NodeMCU Id 2 é selecionada, e seguidamente o monitoramento do sensor analógico - A0 - é feito. Inicialmente o sensor possui o valor 706, variando de 1024 e em ato contínuo para 0.
 
-[ MONITORING A0 MQTT ]
+https://github.com/arlosValadao/P3-SD/assets/61719667/dccc5c94-02c7-4234-919f-42dbd73b936a
 
 
 # <a id="conclusao"></a>
